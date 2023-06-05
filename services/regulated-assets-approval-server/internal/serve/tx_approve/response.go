@@ -1,4 +1,4 @@
-package serve
+package tx_approve
 
 import (
 	"net/http"
