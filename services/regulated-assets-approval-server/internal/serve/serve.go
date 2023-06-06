@@ -14,6 +14,7 @@ import (
 	"github.com/stellar/go/keypair"
 	"github.com/stellar/go/services/regulated-assets-approval-server/internal/db"
 	"github.com/stellar/go/services/regulated-assets-approval-server/internal/serve/kycstatus"
+	"github.com/stellar/go/services/regulated-assets-approval-server/internal/serve/tx_approve"
 	"github.com/stellar/go/support/errors"
 	supporthttp "github.com/stellar/go/support/http"
 	"github.com/stellar/go/support/log"
@@ -94,14 +95,14 @@ func handleHTTP(opts Options) http.Handler {
 		networkPassphrase:   opts.NetworkPassphrase,
 		paymentAmount:       opts.FriendbotPaymentAmount,
 	}.ServeHTTP)
-	mux.Post("/tx-approve", txApproveHandler{
-		assetCode:         opts.AssetCode,
-		issuerKP:          issuerKP,
-		horizonClient:     opts.horizonClient(),
-		networkPassphrase: opts.NetworkPassphrase,
-		db:                db,
-		kycThreshold:      parsedKYCRequiredPaymentThreshold,
-		baseURL:           opts.BaseURL,
+	mux.Post("/tx-approve", tx_approve.TxApprove{
+		AssetCode:         opts.AssetCode,
+		IssuerKP:          issuerKP,
+		HorizonClient:     opts.horizonClient(),
+		NetworkPassphrase: opts.NetworkPassphrase,
+		Db:                db,
+		KycThreshold:      parsedKYCRequiredPaymentThreshold,
+		BaseURL:           opts.BaseURL,
 	}.ServeHTTP)
 	mux.Route("/kyc-status", func(mux chi.Router) {
 		mux.Post("/{callback_id}", kycstatus.PostHandler{

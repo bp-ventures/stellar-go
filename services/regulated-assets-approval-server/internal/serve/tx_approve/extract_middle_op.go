@@ -26,7 +26,7 @@ func extractMiddleOperation(tx *txnbuild.Transaction) *MiddleOperation {
 	operation := tx.Operations()[opIndex]
 
 	manageSellOfferOp, _ := operation.(*txnbuild.ManageSellOffer)
-	if manageSellOfferOp != nil && opIndex == 3 {
+	if manageSellOfferOp != nil {
 		return &MiddleOperation{
 			SourceAccount:   extractSourceAccount(manageSellOfferOp.SourceAccount, tx),
 			ManageSellOffer: manageSellOfferOp,
@@ -34,7 +34,7 @@ func extractMiddleOperation(tx *txnbuild.Transaction) *MiddleOperation {
 	}
 
 	manageBuyOfferOp, _ := operation.(*txnbuild.ManageBuyOffer)
-	if manageBuyOfferOp != nil && opIndex == 3 {
+	if manageBuyOfferOp != nil {
 		return &MiddleOperation{
 			SourceAccount:  extractSourceAccount(manageBuyOfferOp.SourceAccount, tx),
 			ManageBuyOffer: manageBuyOfferOp,
@@ -42,7 +42,7 @@ func extractMiddleOperation(tx *txnbuild.Transaction) *MiddleOperation {
 	}
 
 	paymentOp, _ := operation.(*txnbuild.Payment)
-	if paymentOp != nil && opIndex == 5 {
+	if paymentOp != nil {
 		return &MiddleOperation{
 			SourceAccount: extractSourceAccount(paymentOp.SourceAccount, tx),
 			Payment:       paymentOp,

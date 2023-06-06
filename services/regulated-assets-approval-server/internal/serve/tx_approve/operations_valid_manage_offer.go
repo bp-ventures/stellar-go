@@ -4,11 +4,11 @@ import (
 	"github.com/stellar/go/txnbuild"
 )
 
-func (h txApproveHandler) operationsValidManageOffer(
+func (h TxApprove) operationsValidManageOffer(
 	tx *txnbuild.Transaction,
 	middleOp *MiddleOperation,
 ) bool {
-	issuerAddress := h.issuerKP.Address()
+	issuerAddress := h.IssuerKP.Address()
 	op0, ok := tx.Operations()[0].(*txnbuild.SetTrustLineFlags)
 	if !ok ||
 		op0.SourceAccount != issuerAddress ||
@@ -21,10 +21,17 @@ func (h txApproveHandler) operationsValidManageOffer(
 		return false
 	}
 	_, ok = tx.Operations()[1].(*txnbuild.ManageSellOffer)
-	if !ok {
+	if ok {
 		//TODO check price slippage against database
 		//TODO check amount
-		return false
+	} else {
+		_, ok = tx.Operations()[1].(*txnbuild.ManageBuyOffer)
+		if ok {
+			//TODO check price slippage against database
+			//TODO check amount
+		} else {
+			return false
+		}
 	}
 	op2, ok := tx.Operations()[2].(*txnbuild.SetTrustLineFlags)
 	if !ok ||

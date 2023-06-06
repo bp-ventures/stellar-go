@@ -4,8 +4,8 @@ import (
 	"github.com/stellar/go/amount"
 )
 
-func (h txApproveHandler) parseAmount(middleOp *MiddleOperation) (int64, error) {
-	issuerAddress := h.issuerKP.Address()
+func (h TxApprove) parseAmount(middleOp *MiddleOperation) (int64, error) {
+	issuerAddress := h.IssuerKP.Address()
 	var amountInt64 int64
 	var err error
 	if middleOp.ManageSellOffer != nil {
@@ -17,11 +17,11 @@ func (h txApproveHandler) parseAmount(middleOp *MiddleOperation) (int64, error) 
 	} else if middleOp.ManageBuyOffer != nil {
 		amountInt64, err = amount.ParseInt64(middleOp.ManageSellOffer.Amount)
 	} else if middleOp.Payment != nil {
-		amountInt64, err = amount.ParseInt64(paymentOp.Amount)
+		amountInt64, err = amount.ParseInt64(middleOp.Payment.Amount)
 	}
 
 	if err != nil {
 		return 0, err
 	}
-	return amountInt64
+	return amountInt64, nil
 }

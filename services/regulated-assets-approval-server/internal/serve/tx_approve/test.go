@@ -18,42 +18,42 @@ import (
 
 func TestTxApproveHandlerValidate(t *testing.T) {
 	// empty issuer KP.
-	h := txApproveHandler{}
+	h := TxApprove{}
 	err := h.validate()
 	require.EqualError(t, err, "issuer keypair cannot be nil")
 
 	// empty asset code.
 	issuerAccKeyPair := keypair.MustRandom()
-	h = txApproveHandler{
-		issuerKP: issuerAccKeyPair,
+	h = TxApprove{
+		IssuerKP: issuerAccKeyPair,
 	}
 	err = h.validate()
 	require.EqualError(t, err, "asset code cannot be empty")
 
 	// No Horizon client.
-	h = txApproveHandler{
-		issuerKP:  issuerAccKeyPair,
-		assetCode: "FOOBAR",
+	h = TxApprove{
+		IssuerKP:  issuerAccKeyPair,
+		AssetCode: "FOOBAR",
 	}
 	err = h.validate()
 	require.EqualError(t, err, "horizon client cannot be nil")
 
 	// No network passphrase.
 	horizonMock := horizonclient.MockClient{}
-	h = txApproveHandler{
-		issuerKP:      issuerAccKeyPair,
-		assetCode:     "FOOBAR",
-		horizonClient: &horizonMock,
+	h = TxApprove{
+		IssuerKP:      issuerAccKeyPair,
+		AssetCode:     "FOOBAR",
+		HorizonClient: &horizonMock,
 	}
 	err = h.validate()
 	require.EqualError(t, err, "network passphrase cannot be empty")
 
 	// No db.
-	h = txApproveHandler{
-		issuerKP:          issuerAccKeyPair,
-		assetCode:         "FOOBAR",
-		horizonClient:     &horizonMock,
-		networkPassphrase: network.TestNetworkPassphrase,
+	h = TxApprove{
+		IssuerKP:          issuerAccKeyPair,
+		AssetCode:         "FOOBAR",
+		HorizonClient:     &horizonMock,
+		NetworkPassphrase: network.TestNetworkPassphrase,
 	}
 	err = h.validate()
 	require.EqualError(t, err, "database cannot be nil")
@@ -63,56 +63,56 @@ func TestTxApproveHandlerValidate(t *testing.T) {
 	defer db.Close()
 	conn := db.Open()
 	defer conn.Close()
-	h = txApproveHandler{
-		issuerKP:          issuerAccKeyPair,
-		assetCode:         "FOOBAR",
-		horizonClient:     &horizonMock,
-		networkPassphrase: network.TestNetworkPassphrase,
-		db:                conn,
+	h = TxApprove{
+		IssuerKP:          issuerAccKeyPair,
+		AssetCode:         "FOOBAR",
+		HorizonClient:     &horizonMock,
+		NetworkPassphrase: network.TestNetworkPassphrase,
+		Db:                conn,
 	}
 	err = h.validate()
 	require.EqualError(t, err, "kyc threshold cannot be less than or equal to zero")
 
 	// Negative kycThreshold.
-	h = txApproveHandler{
-		issuerKP:          issuerAccKeyPair,
-		assetCode:         "FOOBAR",
-		horizonClient:     &horizonMock,
-		networkPassphrase: network.TestNetworkPassphrase,
-		db:                conn,
-		kycThreshold:      -1,
+	h = TxApprove{
+		IssuerKP:          issuerAccKeyPair,
+		AssetCode:         "FOOBAR",
+		HorizonClient:     &horizonMock,
+		NetworkPassphrase: network.TestNetworkPassphrase,
+		Db:                conn,
+		KycThreshold:      -1,
 	}
 	err = h.validate()
 	require.EqualError(t, err, "kyc threshold cannot be less than or equal to zero")
 
 	// no baseURL.
-	h = txApproveHandler{
-		issuerKP:          issuerAccKeyPair,
-		assetCode:         "FOOBAR",
-		horizonClient:     &horizonMock,
-		networkPassphrase: network.TestNetworkPassphrase,
-		db:                conn,
-		kycThreshold:      1,
+	h = TxApprove{
+		IssuerKP:          issuerAccKeyPair,
+		AssetCode:         "FOOBAR",
+		HorizonClient:     &horizonMock,
+		NetworkPassphrase: network.TestNetworkPassphrase,
+		Db:                conn,
+		KycThreshold:      1,
 	}
 	err = h.validate()
 	require.EqualError(t, err, "base url cannot be empty")
 
 	// Success.
-	h = txApproveHandler{
-		issuerKP:          issuerAccKeyPair,
-		assetCode:         "FOOBAR",
-		horizonClient:     &horizonMock,
-		networkPassphrase: network.TestNetworkPassphrase,
-		db:                conn,
-		kycThreshold:      1,
-		baseURL:           "https://example.com",
+	h = TxApprove{
+		IssuerKP:          issuerAccKeyPair,
+		AssetCode:         "FOOBAR",
+		HorizonClient:     &horizonMock,
+		NetworkPassphrase: network.TestNetworkPassphrase,
+		Db:                conn,
+		KycThreshold:      1,
+		BaseURL:           "https://example.com",
 	}
 	err = h.validate()
 	require.NoError(t, err)
 }
 
 func TestTxApproveHandler_validateInput(t *testing.T) {
-	h := txApproveHandler{}
+	h := TxApprove{}
 	ctx := context.Background()
 
 	// rejects if incoming tx is empty
@@ -135,11 +135,11 @@ func TestTxApproveHandler_validateInput(t *testing.T) {
 
 	// rejects if tx source account is the issuer
 	clientKP := keypair.MustRandom()
-	h.issuerKP = keypair.MustRandom()
+	h.IssuerKP = keypair.MustRandom()
 
 	tx, err := txnbuild.NewTransaction(txnbuild.TransactionParams{
 		SourceAccount: &horizon.Account{
-			AccountID: h.issuerKP.Address(),
+			AccountID: h.IssuerKP.Address(),
 			Sequence:  1,
 		},
 		IncrementSequenceNum: true,
@@ -177,7 +177,7 @@ func TestTxApproveHandler_validateInput(t *testing.T) {
 				Destination:   clientKP.Address(),
 				Amount:        "1.0000000",
 				Asset:         txnbuild.NativeAsset{},
-				SourceAccount: h.issuerKP.Address(),
+				SourceAccount: h.IssuerKP.Address(),
 			},
 		},
 	})
@@ -226,11 +226,11 @@ func TestTxApproveHandler_handleActionRequiredResponseIfNeeded(t *testing.T) {
 
 	kycThreshold, err := amount.ParseInt64("500")
 	require.NoError(t, err)
-	h := txApproveHandler{
-		assetCode:    "FOO",
-		baseURL:      "https://example.com",
-		kycThreshold: kycThreshold,
-		db:           conn,
+	h := TxApprove{
+		AssetCode:    "FOO",
+		BaseURL:      "https://example.com",
+		KycThreshold: kycThreshold,
+		Db:           conn,
 	}
 
 	// payments up to the the threshold won't trigger "action_required"
@@ -238,7 +238,10 @@ func TestTxApproveHandler_handleActionRequiredResponseIfNeeded(t *testing.T) {
 	paymentOp := &txnbuild.Payment{
 		Amount: amount.StringFromInt64(kycThreshold),
 	}
-	txApprovalResp, err := h.handleActionRequiredResponseIfNeeded(ctx, clientKP.Address(), paymentOp)
+	middleOp := &MiddleOperation{
+		Payment: paymentOp,
+	}
+	txApprovalResp, err := h.checkKyc(ctx, middleOp)
 	require.NoError(t, err)
 	require.Nil(t, txApprovalResp)
 
@@ -246,7 +249,10 @@ func TestTxApproveHandler_handleActionRequiredResponseIfNeeded(t *testing.T) {
 	paymentOp = &txnbuild.Payment{
 		Amount: amount.StringFromInt64(kycThreshold + 1),
 	}
-	txApprovalResp, err = h.handleActionRequiredResponseIfNeeded(ctx, clientKP.Address(), paymentOp)
+	middleOp = &MiddleOperation{
+		Payment: paymentOp,
+	}
+	txApprovalResp, err = h.checkKyc(ctx, middleOp)
 	require.NoError(t, err)
 
 	var callbackID string
@@ -275,7 +281,10 @@ func TestTxApproveHandler_handleActionRequiredResponseIfNeeded(t *testing.T) {
 	`
 	_, err = conn.ExecContext(ctx, q, clientKP.Address())
 	require.NoError(t, err)
-	txApprovalResp, err = h.handleActionRequiredResponseIfNeeded(ctx, clientKP.Address(), paymentOp)
+	middleOp = &MiddleOperation{
+		Payment: paymentOp,
+	}
+	txApprovalResp, err = h.checkKyc(ctx, middleOp)
 	require.NoError(t, err)
 	require.Nil(t, txApprovalResp)
 
@@ -290,7 +299,10 @@ func TestTxApproveHandler_handleActionRequiredResponseIfNeeded(t *testing.T) {
 	`
 	_, err = conn.ExecContext(ctx, q, clientKP.Address())
 	require.NoError(t, err)
-	txApprovalResp, err = h.handleActionRequiredResponseIfNeeded(ctx, clientKP.Address(), paymentOp)
+	middleOp = &MiddleOperation{
+		Payment: paymentOp,
+	}
+	txApprovalResp, err = h.checkKyc(ctx, middleOp)
 	require.NoError(t, err)
 	require.Equal(t, NewRejectedTxApprovalResponse("Your KYC was rejected and you're not authorized for operations above 500.00 FOO."), txApprovalResp)
 
@@ -305,7 +317,10 @@ func TestTxApproveHandler_handleActionRequiredResponseIfNeeded(t *testing.T) {
 	`
 	_, err = conn.ExecContext(ctx, q, clientKP.Address())
 	require.NoError(t, err)
-	txApprovalResp, err = h.handleActionRequiredResponseIfNeeded(ctx, clientKP.Address(), paymentOp)
+	middleOp = &MiddleOperation{
+		Payment: paymentOp,
+	}
+	txApprovalResp, err = h.checkKyc(ctx, middleOp)
 	require.NoError(t, err)
 	require.Equal(t, NewPendingTxApprovalResponse("Your account could not be verified as approved nor rejected and was marked as pending. You will need staff authorization for operations above 500.00 FOO."), txApprovalResp)
 }
@@ -335,14 +350,14 @@ func TestTxApproveHandler_txApprove_rejected(t *testing.T) {
 			Sequence:  2,
 		}, nil)
 
-	handler := txApproveHandler{
-		issuerKP:          issuerKP,
-		assetCode:         assetGOAT.GetCode(),
-		horizonClient:     &horizonMock,
-		networkPassphrase: network.TestNetworkPassphrase,
-		db:                conn,
-		kycThreshold:      kycThresholdAmount,
-		baseURL:           "https://example.com",
+	handler := TxApprove{
+		IssuerKP:          issuerKP,
+		AssetCode:         assetGOAT.GetCode(),
+		HorizonClient:     &horizonMock,
+		NetworkPassphrase: network.TestNetworkPassphrase,
+		Db:                conn,
+		KycThreshold:      kycThresholdAmount,
+		BaseURL:           "https://example.com",
 	}
 
 	// "rejected" if tx is empty
@@ -381,7 +396,7 @@ func TestTxApproveHandler_txApprove_rejected(t *testing.T) {
 
 	txApprovalResp, err := handler.txApprove(ctx, txApproveRequest{Tx: txe})
 	require.NoError(t, err)
-	assert.Equal(t, NewRejectedTxApprovalResponse("Please submit a transaction with exactly one operation of type payment."), txApprovalResp)
+	assert.Equal(t, NewRejectedTxApprovalResponse("Please submit a transaction with exactly one operation of type payment or offer."), txApprovalResp)
 
 	// rejected if the single operation is not a payment
 	tx, err = txnbuild.NewTransaction(
@@ -519,14 +534,14 @@ func TestTxApproveHandler_txApprove_success(t *testing.T) {
 			Sequence:  2,
 		}, nil)
 
-	handler := txApproveHandler{
-		issuerKP:          issuerKP,
-		assetCode:         assetGOAT.GetCode(),
-		horizonClient:     &horizonMock,
-		networkPassphrase: network.TestNetworkPassphrase,
-		db:                conn,
-		kycThreshold:      kycThresholdAmount,
-		baseURL:           "https://example.com",
+	handler := TxApprove{
+		IssuerKP:          issuerKP,
+		AssetCode:         assetGOAT.GetCode(),
+		HorizonClient:     &horizonMock,
+		NetworkPassphrase: network.TestNetworkPassphrase,
+		Db:                conn,
+		KycThreshold:      kycThresholdAmount,
+		BaseURL:           "https://example.com",
 	}
 
 	tx, err := txnbuild.NewTransaction(
@@ -606,14 +621,14 @@ func TestTxApproveHandler_txApprove_actionRequired(t *testing.T) {
 			Sequence:  2,
 		}, nil)
 
-	handler := txApproveHandler{
-		issuerKP:          issuerKP,
-		assetCode:         assetGOAT.GetCode(),
-		horizonClient:     &horizonMock,
-		networkPassphrase: network.TestNetworkPassphrase,
-		db:                conn,
-		kycThreshold:      kycThresholdAmount,
-		baseURL:           "https://example.com",
+	handler := TxApprove{
+		IssuerKP:          issuerKP,
+		AssetCode:         assetGOAT.GetCode(),
+		HorizonClient:     &horizonMock,
+		NetworkPassphrase: network.TestNetworkPassphrase,
+		Db:                conn,
+		KycThreshold:      kycThresholdAmount,
+		BaseURL:           "https://example.com",
 	}
 
 	tx, err := txnbuild.NewTransaction(
@@ -682,14 +697,14 @@ func TestTxApproveHandler_txApprove_revised(t *testing.T) {
 			Sequence:  2,
 		}, nil)
 
-	handler := txApproveHandler{
-		issuerKP:          issuerKP,
-		assetCode:         assetGOAT.GetCode(),
-		horizonClient:     &horizonMock,
-		networkPassphrase: network.TestNetworkPassphrase,
-		db:                conn,
-		kycThreshold:      kycThresholdAmount,
-		baseURL:           "https://example.com",
+	handler := TxApprove{
+		IssuerKP:          issuerKP,
+		AssetCode:         assetGOAT.GetCode(),
+		HorizonClient:     &horizonMock,
+		NetworkPassphrase: network.TestNetworkPassphrase,
+		Db:                conn,
+		KycThreshold:      kycThresholdAmount,
+		BaseURL:           "https://example.com",
 	}
 
 	tx, err := txnbuild.NewTransaction(
@@ -761,12 +776,24 @@ func TestTxApproveHandler_txApprove_revised(t *testing.T) {
 
 func TestValidateTransactionOperationsForSuccess(t *testing.T) {
 	ctx := context.Background()
+	db := dbtest.Open(t)
+	defer db.Close()
+	conn := db.Open()
+	defer conn.Close()
 	senderKP := keypair.MustRandom()
 	receiverKP := keypair.MustRandom()
 	issuerKP := keypair.MustRandom()
 	assetGOAT := txnbuild.CreditAsset{
 		Code:   "GOAT",
 		Issuer: issuerKP.Address(),
+	}
+	kycThreshold, err := amount.ParseInt64("500")
+	h := TxApprove{
+		AssetCode:    "GOAT",
+		IssuerKP:     issuerKP,
+		BaseURL:      "https://example.com",
+		KycThreshold: kycThreshold,
+		Db:           conn,
 	}
 
 	// rejected if number of operations is unsupported
@@ -789,10 +816,9 @@ func TestValidateTransactionOperationsForSuccess(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	txApprovalResp, paymentOp, paymentSource := validateTransactionOperationsForSuccess(ctx, tx, issuerKP.Address())
+	txApprovalResp, middleOp := h.checkOperationsCompliance(ctx, tx)
 	assert.Equal(t, NewRejectedTxApprovalResponse("Unsupported number of operations."), txApprovalResp)
-	assert.Nil(t, paymentOp)
-	assert.Empty(t, paymentSource)
+	assert.Nil(t, middleOp)
 
 	// rejected if operation at index "2" is not a payment
 	tx, err = txnbuild.NewTransaction(txnbuild.TransactionParams{
@@ -813,10 +839,9 @@ func TestValidateTransactionOperationsForSuccess(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	txApprovalResp, paymentOp, paymentSource = validateTransactionOperationsForSuccess(ctx, tx, issuerKP.Address())
+	txApprovalResp, middleOp = h.checkOperationsCompliance(ctx, tx)
 	assert.Equal(t, NewRejectedTxApprovalResponse("There are one or more unexpected operations in the provided transaction."), txApprovalResp)
-	assert.Nil(t, paymentOp)
-	assert.Empty(t, paymentSource)
+	assert.Nil(t, middleOp)
 
 	// rejected if the operations list don't match the expected format [AllowTrust, AllowTrust, Payment, AllowTrust, AllowTrust]
 	tx, err = txnbuild.NewTransaction(txnbuild.TransactionParams{
@@ -842,10 +867,9 @@ func TestValidateTransactionOperationsForSuccess(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	txApprovalResp, paymentOp, paymentSource = validateTransactionOperationsForSuccess(ctx, tx, issuerKP.Address())
+	txApprovalResp, middleOp = h.checkOperationsCompliance(ctx, tx)
 	assert.Equal(t, NewRejectedTxApprovalResponse("There are one or more unexpected operations in the provided transaction."), txApprovalResp)
-	assert.Nil(t, paymentOp)
-	assert.Empty(t, paymentSource)
+	assert.Nil(t, middleOp)
 
 	// rejected if the values inside the operations list don't match the expected format
 	tx, err = txnbuild.NewTransaction(txnbuild.TransactionParams{
@@ -891,10 +915,9 @@ func TestValidateTransactionOperationsForSuccess(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	txApprovalResp, paymentOp, paymentSource = validateTransactionOperationsForSuccess(ctx, tx, issuerKP.Address())
+	txApprovalResp, middleOp = h.checkOperationsCompliance(ctx, tx)
 	assert.Equal(t, NewRejectedTxApprovalResponse("There are one or more unexpected operations in the provided transaction."), txApprovalResp)
-	assert.Nil(t, paymentOp)
-	assert.Empty(t, paymentSource)
+	assert.Nil(t, middleOp)
 
 	// success
 	tx, err = txnbuild.NewTransaction(txnbuild.TransactionParams{
@@ -940,16 +963,16 @@ func TestValidateTransactionOperationsForSuccess(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	txApprovalResp, paymentOp, paymentSource = validateTransactionOperationsForSuccess(ctx, tx, issuerKP.Address())
+	txApprovalResp, middleOp = h.checkOperationsCompliance(ctx, tx)
 	assert.Nil(t, txApprovalResp)
-	assert.Equal(t, senderKP.Address(), paymentSource)
+	assert.Equal(t, senderKP.Address(), middleOp.SourceAccount)
 	wantPaymentOp := &txnbuild.Payment{
 		SourceAccount: senderKP.Address(),
 		Destination:   receiverKP.Address(),
 		Amount:        "1",
 		Asset:         assetGOAT,
 	}
-	assert.Equal(t, wantPaymentOp, paymentOp)
+	assert.Equal(t, wantPaymentOp, middleOp.Payment)
 }
 
 func TestTxApproveHandler_handleSuccessResponseIfNeeded_revisable(t *testing.T) {
@@ -977,14 +1000,14 @@ func TestTxApproveHandler_handleSuccessResponseIfNeeded_revisable(t *testing.T) 
 			Sequence:  2,
 		}, nil)
 
-	handler := txApproveHandler{
-		issuerKP:          issuerKP,
-		assetCode:         assetGOAT.GetCode(),
-		horizonClient:     &horizonMock,
-		networkPassphrase: network.TestNetworkPassphrase,
-		db:                conn,
-		kycThreshold:      kycThresholdAmount,
-		baseURL:           "https://example.com",
+	handler := TxApprove{
+		IssuerKP:          issuerKP,
+		AssetCode:         assetGOAT.GetCode(),
+		HorizonClient:     &horizonMock,
+		NetworkPassphrase: network.TestNetworkPassphrase,
+		Db:                conn,
+		KycThreshold:      kycThresholdAmount,
+		BaseURL:           "https://example.com",
 	}
 
 	revisableTx, err := txnbuild.NewTransaction(txnbuild.TransactionParams{
@@ -1006,7 +1029,7 @@ func TestTxApproveHandler_handleSuccessResponseIfNeeded_revisable(t *testing.T) 
 	})
 	require.NoError(t, err)
 
-	txSuccessResponse, err := handler.handleSuccessResponseIfNeeded(ctx, revisableTx)
+	txSuccessResponse, err := handler.checkTxCompliance(ctx, revisableTx)
 	require.NoError(t, err)
 	assert.Nil(t, txSuccessResponse)
 }
@@ -1036,14 +1059,14 @@ func TestTxApproveHandler_handleSuccessResponseIfNeeded_rejected(t *testing.T) {
 			Sequence:  2,
 		}, nil)
 
-	handler := txApproveHandler{
-		issuerKP:          issuerKP,
-		assetCode:         assetGOAT.GetCode(),
-		horizonClient:     &horizonMock,
-		networkPassphrase: network.TestNetworkPassphrase,
-		db:                conn,
-		kycThreshold:      kycThresholdAmount,
-		baseURL:           "https://example.com",
+	handler := TxApprove{
+		IssuerKP:          issuerKP,
+		AssetCode:         assetGOAT.GetCode(),
+		HorizonClient:     &horizonMock,
+		NetworkPassphrase: network.TestNetworkPassphrase,
+		Db:                conn,
+		KycThreshold:      kycThresholdAmount,
+		BaseURL:           "https://example.com",
 	}
 
 	// rejected if operations don't match the expected format
@@ -1070,7 +1093,7 @@ func TestTxApproveHandler_handleSuccessResponseIfNeeded_rejected(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	txApprovalResp, err := handler.handleSuccessResponseIfNeeded(ctx, tx)
+	txApprovalResp, err := handler.checkTxCompliance(ctx, tx)
 	require.NoError(t, err)
 	assert.Equal(t, NewRejectedTxApprovalResponse("There are one or more unexpected operations in the provided transaction."), txApprovalResp)
 
@@ -1118,7 +1141,7 @@ func TestTxApproveHandler_handleSuccessResponseIfNeeded_rejected(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	txApprovalResp, err = handler.handleSuccessResponseIfNeeded(ctx, tx)
+	txApprovalResp, err = handler.checkTxCompliance(ctx, tx)
 	require.NoError(t, err)
 	assert.Equal(t, NewRejectedTxApprovalResponse("Can't transfer asset to its issuer."), txApprovalResp)
 
@@ -1167,7 +1190,7 @@ func TestTxApproveHandler_handleSuccessResponseIfNeeded_rejected(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	txApprovalResp, err = handler.handleSuccessResponseIfNeeded(ctx, tx)
+	txApprovalResp, err = handler.checkTxCompliance(ctx, tx)
 	require.NoError(t, err)
 	assert.Equal(t, NewRejectedTxApprovalResponse("Invalid transaction sequence number."), txApprovalResp)
 }
@@ -1197,14 +1220,14 @@ func TestTxApproveHandler_handleSuccessResponseIfNeeded_actionRequired(t *testin
 			Sequence:  2,
 		}, nil)
 
-	handler := txApproveHandler{
-		issuerKP:          issuerKP,
-		assetCode:         assetGOAT.GetCode(),
-		horizonClient:     &horizonMock,
-		networkPassphrase: network.TestNetworkPassphrase,
-		db:                conn,
-		kycThreshold:      kycThresholdAmount,
-		baseURL:           "https://example.com",
+	handler := TxApprove{
+		IssuerKP:          issuerKP,
+		AssetCode:         assetGOAT.GetCode(),
+		HorizonClient:     &horizonMock,
+		NetworkPassphrase: network.TestNetworkPassphrase,
+		Db:                conn,
+		KycThreshold:      kycThresholdAmount,
+		BaseURL:           "https://example.com",
 	}
 
 	// compliant operations with a payment above threshold will return "action_required" if the user hasn't gone through KYC yet
@@ -1251,7 +1274,7 @@ func TestTxApproveHandler_handleSuccessResponseIfNeeded_actionRequired(t *testin
 	})
 	require.NoError(t, err)
 
-	txApprovalResponse, err := handler.handleSuccessResponseIfNeeded(ctx, tx)
+	txApprovalResponse, err := handler.checkTxCompliance(ctx, tx)
 	require.NoError(t, err)
 
 	var callbackID string
@@ -1275,9 +1298,9 @@ func TestTxApproveHandler_handleSuccessResponseIfNeeded_actionRequired(t *testin
 			pending_at = NULL
 		WHERE stellar_address = $1
 	`
-	_, err = handler.db.ExecContext(ctx, query, senderKP.Address())
+	_, err = handler.Db.ExecContext(ctx, query, senderKP.Address())
 	require.NoError(t, err)
-	txApprovalResponse, err = handler.handleSuccessResponseIfNeeded(ctx, tx)
+	txApprovalResponse, err = handler.checkTxCompliance(ctx, tx)
 	require.NoError(t, err)
 	assert.Equal(t, NewRejectedTxApprovalResponse("Your KYC was rejected and you're not authorized for operations above 500.00 GOAT."), txApprovalResponse)
 
@@ -1290,9 +1313,9 @@ func TestTxApproveHandler_handleSuccessResponseIfNeeded_actionRequired(t *testin
 			pending_at = NOW()
 		WHERE stellar_address = $1
 	`
-	_, err = handler.db.ExecContext(ctx, query, senderKP.Address())
+	_, err = handler.Db.ExecContext(ctx, query, senderKP.Address())
 	require.NoError(t, err)
-	txApprovalResponse, err = handler.handleSuccessResponseIfNeeded(ctx, tx)
+	txApprovalResponse, err = handler.checkTxCompliance(ctx, tx)
 	require.NoError(t, err)
 	assert.Equal(t, NewPendingTxApprovalResponse("Your account could not be verified as approved nor rejected and was marked as pending. You will need staff authorization for operations above 500.00 GOAT."), txApprovalResponse)
 
@@ -1305,9 +1328,9 @@ func TestTxApproveHandler_handleSuccessResponseIfNeeded_actionRequired(t *testin
 			pending_at = NULL
 		WHERE stellar_address = $1
 	`
-	_, err = handler.db.ExecContext(ctx, query, senderKP.Address())
+	_, err = handler.Db.ExecContext(ctx, query, senderKP.Address())
 	require.NoError(t, err)
-	txApprovalResponse, err = handler.handleSuccessResponseIfNeeded(ctx, tx)
+	txApprovalResponse, err = handler.checkTxCompliance(ctx, tx)
 	require.NoError(t, err)
 	assert.Equal(t, NewSuccessTxApprovalResponse(txApprovalResponse.Tx, "Transaction is compliant and signed by the issuer."), txApprovalResponse)
 }
@@ -1328,6 +1351,13 @@ func TestTxApproveHandler_handleSuccessResponseIfNeeded_success(t *testing.T) {
 	}
 	kycThresholdAmount, err := amount.ParseInt64("500")
 	require.NoError(t, err)
+	h := TxApprove{
+		AssetCode:    "GOAT",
+		IssuerKP:     issuerKP,
+		BaseURL:      "https://example.com",
+		KycThreshold: kycThresholdAmount,
+		Db:           conn,
+	}
 
 	horizonMock := horizonclient.MockClient{}
 	horizonMock.
@@ -1337,14 +1367,14 @@ func TestTxApproveHandler_handleSuccessResponseIfNeeded_success(t *testing.T) {
 			Sequence:  2,
 		}, nil)
 
-	handler := txApproveHandler{
-		issuerKP:          issuerKP,
-		assetCode:         assetGOAT.GetCode(),
-		horizonClient:     &horizonMock,
-		networkPassphrase: network.TestNetworkPassphrase,
-		db:                conn,
-		kycThreshold:      kycThresholdAmount,
-		baseURL:           "https://example.com",
+	handler := TxApprove{
+		IssuerKP:          issuerKP,
+		AssetCode:         assetGOAT.GetCode(),
+		HorizonClient:     &horizonMock,
+		NetworkPassphrase: network.TestNetworkPassphrase,
+		Db:                conn,
+		KycThreshold:      kycThresholdAmount,
+		BaseURL:           "https://example.com",
 	}
 
 	tx, err := txnbuild.NewTransaction(txnbuild.TransactionParams{
@@ -1390,7 +1420,7 @@ func TestTxApproveHandler_handleSuccessResponseIfNeeded_success(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	txApprovalResponse, err := handler.handleSuccessResponseIfNeeded(ctx, tx)
+	txApprovalResponse, err := handler.checkTxCompliance(ctx, tx)
 	require.NoError(t, err)
 	require.Equal(t, NewSuccessTxApprovalResponse(txApprovalResponse.Tx, "Transaction is compliant and signed by the issuer."), txApprovalResponse)
 
@@ -1406,13 +1436,13 @@ func TestTxApproveHandler_handleSuccessResponseIfNeeded_success(t *testing.T) {
 	assert.Equal(t, tx.SequenceNumber(), gotTx.SequenceNumber())
 
 	// test if the operations are as expected
-	resp, _, _ := validateTransactionOperationsForSuccess(ctx, gotTx, issuerKP.Address())
+	resp, _ := h.checkOperationsCompliance(ctx, gotTx)
 	assert.Nil(t, resp)
 
 	// check if the transaction contains the issuer's signature
-	gotTxHash, err := gotTx.Hash(handler.networkPassphrase)
+	gotTxHash, err := gotTx.Hash(handler.NetworkPassphrase)
 	require.NoError(t, err)
-	err = handler.issuerKP.Verify(gotTxHash[:], gotTx.Signatures()[0].Signature)
+	err = handler.IssuerKP.Verify(gotTxHash[:], gotTx.Signatures()[0].Signature)
 	require.NoError(t, err)
 }
 
@@ -1421,7 +1451,7 @@ func TestConvertAmountToReadableString(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, int64(5000000000), parsedAmount)
 
-	readableAmount, err := convertAmountToReadableString(parsedAmount)
+	readableAmount, err := ConvertAmountToReadableString(parsedAmount)
 	require.NoError(t, err)
 	assert.Equal(t, "500.00", readableAmount)
 }

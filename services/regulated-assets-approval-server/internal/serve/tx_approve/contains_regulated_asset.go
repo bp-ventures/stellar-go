@@ -1,25 +1,40 @@
 package tx_approve
 
-func (h txApproveHandler) containsRegulatedAsset(
+import (
+	"errors"
+	"github.com/stellar/go/txnbuild"
+)
+
+func (h TxApprove) getRegulatedAsset(
 	middleOp *MiddleOperation,
-) bool {
-	issuerAddress := h.issuerKP.Address()
+) (txnbuild.Asset, error) {
+	issuerAddress := h.IssuerKP.Address()
 	if middleOp.ManageSellOffer != nil {
 		offer := middleOp.ManageSellOffer
-		return (offer.Selling.GetCode() == h.assetCode &&
-			offer.Selling.GetIssuer() == issuerAddress) ||
-			(offer.Buying.GetCode() == h.assetCode &&
-				offer.Buying.GetIssuer() == issuerAddress)
+		if offer.Selling.GetCode() == h.AssetCode &&
+			offer.Selling.GetIssuer() == issuerAddress {
+			return offer.Selling, nil
+		}
+		if offer.Buying.GetCode() == h.AssetCode &&
+			offer.Buying.GetIssuer() == issuerAddress {
+			return offer.Buying, nil
+		}
 	} else if middleOp.ManageBuyOffer != nil {
 		offer := middleOp.ManageBuyOffer
-		return (offer.Selling.GetCode() == h.assetCode &&
-			offer.Selling.GetIssuer() == issuerAddress) ||
-			(offer.Buying.GetCode() == h.assetCode &&
-				offer.Buying.GetIssuer() == issuerAddress)
+		if offer.Selling.GetCode() == h.AssetCode &&
+			offer.Selling.GetIssuer() == issuerAddress {
+			return offer.Selling, nil
+		}
+		if offer.Buying.GetCode() == h.AssetCode &&
+			offer.Buying.GetIssuer() == issuerAddress {
+			return offer.Buying, nil
+		}
 	} else if middleOp.Payment != nil {
 		payment := middleOp.Payment
-		return payment.Asset.GetCode() == h.assetCode &&
-			payment.Asset.GetIssuer() == issuerAddress
+		if payment.Asset.GetCode() == h.AssetCode &&
+			payment.Asset.GetIssuer() == issuerAddress {
+			return payment.Asset, nil
+		}
 	}
-	return false
+	return nil, errors.New("failed to find asset")
 }

@@ -9,7 +9,10 @@ import (
 
 // validateInput validates if the input parameters contain a valid transaction
 // and if the source account is not set in a way that would harm the issuer.
-func (h txApproveHandler) validateInput(ctx context.Context, in txApproveRequest) (*txApprovalResponse, *txnbuild.Transaction) {
+func (h TxApprove) validateInput(
+	ctx context.Context,
+	in txApproveRequest,
+) (*txApprovalResponse, *txnbuild.Transaction) {
 	if in.Tx == "" {
 		log.Ctx(ctx).Error(`request is missing parameter "tx".`)
 		return NewRejectedTxApprovalResponse(`Missing parameter "tx".`), nil
@@ -27,18 +30,18 @@ func (h txApproveHandler) validateInput(ctx context.Context, in txApproveRequest
 		return NewRejectedTxApprovalResponse(`Invalid parameter "tx".`), nil
 	}
 
-	if tx.SourceAccount().AccountID == h.issuerKP.Address() {
-		log.Ctx(ctx).Errorf("transaction sourceAccount is the same as the server issuer account %s", h.issuerKP.Address())
+	if tx.SourceAccount().AccountID == h.IssuerKP.Address() {
+		log.Ctx(ctx).Errorf("transaction sourceAccount is the same as the server issuer account %s", h.IssuerKP.Address())
 		return NewRejectedTxApprovalResponse("Transaction source account is invalid."), nil
 	}
 
-	// only AllowTrust operations can have the issuer as their source account
+	// only SetTrustLineFlags operations can have the issuer as their source account
 	for _, op := range tx.Operations() {
-		if _, ok := op.(*txnbuild.AllowTrust); ok {
+		if _, ok := op.(*txnbuild.SetTrustLineFlags); ok {
 			continue
 		}
 
-		if op.GetSourceAccount() == h.issuerKP.Address() {
+		if op.GetSourceAccount() == h.IssuerKP.Address() {
 			log.Ctx(ctx).Error("transaction contains one or more unauthorized operations where source account is the issuer account")
 			return NewRejectedTxApprovalResponse("There are one or more unauthorized operations in the provided transaction."), nil
 		}

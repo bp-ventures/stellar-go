@@ -17,28 +17,17 @@ import (
 	"github.com/stellar/go/txnbuild"
 )
 
-type txApproveHandler struct {
-	issuerKP          *keypair.Full
-	assetCode         string
-	horizonClient     horizonclient.ClientInterface
-	networkPassphrase string
-	db                *sqlx.DB
-	kycThreshold      int64
-	baseURL           string
+type TxApprove struct {
+	IssuerKP          *keypair.Full
+	AssetCode         string
+	HorizonClient     horizonclient.ClientInterface
+	NetworkPassphrase string
+	Db                *sqlx.DB
+	KycThreshold      int64
+	BaseURL           string
 }
 
-type txApproveRequest struct {
-	Tx string `json:"tx" form:"tx"`
-}
-
-type MiddleOperation struct {
-	SourceAccount   string
-	Payment         *txnbuild.Payment
-	ManageSellOffer *txnbuild.ManageSellOffer
-	ManageBuyOffer  *txnbuild.ManageBuyOffer
-}
-
-func (h txApproveHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h TxApprove) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	err := h.validate()
 	if err != nil {
@@ -66,7 +55,10 @@ func (h txApproveHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // txApprove is called to validate the input transaction.
-func (h txApproveHandler) txApprove(ctx context.Context, in txApproveRequest) (resp *txApprovalResponse, err error) {
+func (h TxApprove) txApprove(
+	ctx context.Context,
+	in txApproveRequest,
+) (resp *txApprovalResponse, err error) {
 	defer func() {
 		log.Ctx(ctx).Debug("==== will log responses ====")
 		log.Ctx(ctx).Debugf("req: %+v", in)
@@ -80,11 +72,13 @@ func (h txApproveHandler) txApprove(ctx context.Context, in txApproveRequest) (r
 		return rejectedResponse, nil
 	}
 
-	// Check if the transaction is already in a format we can sign and approve.
+	// Check if the transaction is already compliant, that is, in a format we
+	// can sign and approve.
 	// If yes, we don't need to revise it, we just sign and return the signed xdr.
 	// This covers the "success" case, described here:
 	// https://github.com/stellar/stellar-protocol/blob/master/ecosystem/sep-0008.md#success
-	txSuccessResp, err := h.handleSuccessResponseIfNeeded(ctx, tx)
+	log.Ctx(ctx).Debug("Checking if transaction is already compliant")
+	txSuccessResp, err := h.checkTxCompliance(ctx, tx)
 	if err != nil {
 		return nil, errors.Wrap(err, "checking if transaction in request was compliant")
 	}
@@ -103,14 +97,16 @@ func (h txApproveHandler) txApprove(ctx context.Context, in txApproveRequest) (r
 	//   1. check if there's only one operation in the tx
 	//   2. check if the operation is supported
 	//   3. check if asset in the operation is our regulated asset
-	//   4. check if account exists in blockchain and tx has correct sequence number
-	//   5. check is there's any pending KYC for the source account
+	//   4. poll account from blockchain and check sequence number
+	//   5. check if KYC is required for the source account
 	//   6. build a revised transaction, containing our extra operations for regulation
 	//   7. sign and return the revised transaction
 
+	log.Ctx(ctx).Debug("Revising transaction")
+
 	// 1. check if there's only one operation in the tx
 	if len(tx.Operations()) != 1 {
-		return NewRejectedTxApprovalResponse("Please submit a transaction with exactly one operation of type payment."), nil
+		return NewRejectedTxApprovalResponse("Please submit a transaction with exactly one operation of type payment or offer."), nil
 	}
 
 	// 2. check if the operation is supported
@@ -119,29 +115,27 @@ func (h txApproveHandler) txApprove(ctx context.Context, in txApproveRequest) (r
 		return NewRejectedTxApprovalResponse("Unexpected operation in the transaction. Support operations: Payment, ManageSellOffer, ManageBuyOffer."), nil
 	}
 
-	if middleOp.Payment != nil && middleOp.Payment.Destination == h.issuerKP.Address() {
+	// 3. check if asset in the operation is our regulated asset
+	if middleOp.Payment != nil && middleOp.Payment.Destination == h.IssuerKP.Address() {
 		return NewRejectedTxApprovalResponse("Can't transfer asset to its issuer."), nil
 	}
-
-	// validate payment asset is the one supported by the issuer
-	issuerAddress := h.issuerKP.Address()
-	if paymentOp.Asset.GetCode() != h.assetCode || paymentOp.Asset.GetIssuer() != issuerAddress {
-		log.Ctx(ctx).Error(`the payment asset is not supported by this issuer`)
-		return NewRejectedTxApprovalResponse("The payment asset is not supported by this issuer."), nil
+	if _, err := h.getRegulatedAsset(middleOp); err != nil {
+		log.Ctx(ctx).Error(`asset is not supported by this issuer`)
+		return NewRejectedTxApprovalResponse("Asset is not supported by this issuer."), nil
 	}
 
-	acc, err := h.horizonClient.AccountDetail(horizonclient.AccountRequest{AccountID: paymentSource})
+	// 4. poll account from blockchain and check sequence number
+	acc, err := h.HorizonClient.AccountDetail(horizonclient.AccountRequest{AccountID: middleOp.SourceAccount})
 	if err != nil {
-		return nil, errors.Wrapf(err, "getting detail for payment source account %s", paymentSource)
+		return nil, errors.Wrapf(err, "getting detail for source account %s", middleOp.SourceAccount)
 	}
-
-	// validate the sequence number
 	if tx.SourceAccount().Sequence != acc.Sequence+1 {
 		log.Ctx(ctx).Errorf(`invalid transaction sequence number tx.SourceAccount().Sequence: %d, accountSequence+1: %d`, tx.SourceAccount().Sequence, acc.Sequence+1)
 		return NewRejectedTxApprovalResponse("Invalid transaction sequence number."), nil
 	}
 
-	actionRequiredResponse, err := h.handleActionRequiredResponseIfNeeded(ctx, middleOp)
+	// 5. check if KYC is required for the source account
+	actionRequiredResponse, err := h.checkKyc(ctx, middleOp)
 	if err != nil {
 		return nil, errors.Wrap(err, "handling KYC required payment")
 	}
@@ -149,55 +143,13 @@ func (h txApproveHandler) txApprove(ctx context.Context, in txApproveRequest) (r
 		return actionRequiredResponse, nil
 	}
 
-	// build the transaction
-	revisedOperations := []txnbuild.Operation{
-		&txnbuild.AllowTrust{
-			Trustor:       paymentSource,
-			Type:          paymentOp.Asset,
-			Authorize:     true,
-			SourceAccount: issuerAddress,
-		},
-		&txnbuild.AllowTrust{
-			Trustor:       paymentOp.Destination,
-			Type:          paymentOp.Asset,
-			Authorize:     true,
-			SourceAccount: issuerAddress,
-		},
-		paymentOp,
-		&txnbuild.AllowTrust{
-			Trustor:       paymentOp.Destination,
-			Type:          paymentOp.Asset,
-			Authorize:     false,
-			SourceAccount: issuerAddress,
-		},
-		&txnbuild.AllowTrust{
-			Trustor:       paymentSource,
-			Type:          paymentOp.Asset,
-			Authorize:     false,
-			SourceAccount: issuerAddress,
-		},
-	}
-	revisedTx, err := txnbuild.NewTransaction(txnbuild.TransactionParams{
-		SourceAccount:        &acc,
-		IncrementSequenceNum: true,
-		Operations:           revisedOperations,
-		BaseFee:              300,
-		Preconditions:        txnbuild.Preconditions{TimeBounds: txnbuild.NewTimeout(300)},
-	})
+	// 6+7. build and sign revised transaction
+	revisedTxXdr, err := h.buildRevisedTx(&acc, middleOp)
 	if err != nil {
 		return nil, errors.Wrap(err, "building transaction")
 	}
 
-	revisedTx, err = revisedTx.Sign(h.networkPassphrase, h.issuerKP)
-	if err != nil {
-		return nil, errors.Wrap(err, "signing transaction")
-	}
-	txe, err := revisedTx.Base64()
-	if err != nil {
-		return nil, errors.Wrap(err, "encoding revised transaction")
-	}
-
-	return NewRevisedTxApprovalResponse(txe), nil
+	return NewRevisedTxApprovalResponse(revisedTxXdr), nil
 }
 
 func extractSourceAccount(sourceAccount string, tx *txnbuild.Transaction) string {
@@ -207,7 +159,7 @@ func extractSourceAccount(sourceAccount string, tx *txnbuild.Transaction) string
 	return tx.SourceAccount().AccountID
 }
 
-func convertAmountToReadableString(threshold int64) (string, error) {
+func ConvertAmountToReadableString(threshold int64) (string, error) {
 	amountStr := amount.StringFromInt64(threshold)
 	amountFloat, err := strconv.ParseFloat(amountStr, 64)
 	if err != nil {

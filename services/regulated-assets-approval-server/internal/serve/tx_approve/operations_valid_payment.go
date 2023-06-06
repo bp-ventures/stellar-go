@@ -4,8 +4,11 @@ import (
 	"github.com/stellar/go/txnbuild"
 )
 
-func (h txApproveHandler) operationsValidPayment(tx *txnbuild.Transaction, middleOp *MiddleOperation) bool {
-	issuerAddress := h.issuerKP.Address()
+func (h TxApprove) operationsValidPayment(
+	tx *txnbuild.Transaction,
+	middleOp *MiddleOperation,
+) bool {
+	issuerAddress := h.IssuerKP.Address()
 	op0, ok := tx.Operations()[0].(*txnbuild.SetTrustLineFlags)
 	if !ok ||
 		op0.SourceAccount != issuerAddress ||
@@ -48,7 +51,7 @@ func (h txApproveHandler) operationsValidPayment(tx *txnbuild.Transaction, middl
 	op4, ok := tx.Operations()[4].(*txnbuild.SetTrustLineFlags)
 	if !ok ||
 		op4.SourceAccount != issuerAddress ||
-		!containsTrustLineFlags(op4.SetFlags, []txnbuild.TrustLineFlag{
+		!containsTrustLineFlags(op4.ClearFlags, []txnbuild.TrustLineFlag{
 			txnbuild.TrustLineAuthorized,
 			// Here we'd also check for txnbuild.TrustLineAuthorizedToMaintainLiabilities,
 			// but this would prevent the account from creating offers.

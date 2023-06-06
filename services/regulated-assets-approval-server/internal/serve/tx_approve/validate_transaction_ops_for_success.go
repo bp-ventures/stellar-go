@@ -6,17 +6,24 @@ import (
 	"github.com/stellar/go/txnbuild"
 )
 
-// validateTransactionOperationsForSuccess checks if the incoming transaction
+// checkOperationsCompliance checks if the incoming transaction
 // operations are compliant with the anchor's SEP-8 policy.
-func (h txApproveHandler) validateTransactionOperationsForSuccess(ctx context.Context, tx *txnbuild.Transaction) (*txApprovalResponse, *MiddleOperation) {
+func (h TxApprove) checkOperationsCompliance(
+	ctx context.Context,
+	tx *txnbuild.Transaction,
+) (*txApprovalResponse, *MiddleOperation) {
 	middleOp := extractMiddleOperation(tx)
 	if middleOp == nil {
-		log.Ctx(ctx).Error(`middle operation is not payment, offer or path payment`)
+		log.Ctx(ctx).Error(`middle operation type is not supported`)
 		return NewRejectedTxApprovalResponse("There are one or more unexpected operations in the provided transaction."), nil
 	}
 
-	if !h.containsAssetIssuer(middleOp) {
+	if _, err := h.getRegulatedAsset(middleOp); err != nil {
 		return NewRejectedTxApprovalResponse("This asset is not supported by this issuer."), nil
+	}
+
+	if middleOp.Payment != nil && middleOp.Payment.Destination == h.IssuerKP.Address() {
+		return NewRejectedTxApprovalResponse("Can't transfer asset to its issuer."), nil
 	}
 
 	operationsValid := func() bool {

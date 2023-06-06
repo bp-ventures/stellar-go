@@ -9,9 +9,9 @@ import (
 	"github.com/stellar/go/support/errors"
 )
 
-// handleActionRequiredResponseIfNeeded validates and returns an action_required
+// checkKyc validates and returns an action_required
 // response if the payment requires KYC.
-func (h txApproveHandler) handleActionRequiredResponseIfNeeded(
+func (h TxApprove) checkKyc(
 	ctx context.Context,
 	middleOp *MiddleOperation,
 ) (*txApprovalResponse, error) {
@@ -19,7 +19,7 @@ func (h txApproveHandler) handleActionRequiredResponseIfNeeded(
 	if err != nil {
 		return nil, err
 	}
-	if amountInt64 <= h.kycThreshold {
+	if amountInt64 <= h.KycThreshold {
 		return nil, nil
 	}
 
@@ -41,7 +41,7 @@ func (h txApproveHandler) handleActionRequiredResponseIfNeeded(
 		callbackID                        string
 		approvedAt, rejectedAt, pendingAt sql.NullTime
 	)
-	err = h.db.QueryRowContext(ctx, q, middleOp.SourceAccount, intendedCallbackID).Scan(&callbackID, &approvedAt, &rejectedAt, &pendingAt)
+	err = h.Db.QueryRowContext(ctx, q, middleOp.SourceAccount, intendedCallbackID).Scan(&callbackID, &approvedAt, &rejectedAt, &pendingAt)
 	if err != nil {
 		return nil, errors.Wrap(err, "inserting new row into accounts_kyc_status table")
 	}
@@ -50,22 +50,22 @@ func (h txApproveHandler) handleActionRequiredResponseIfNeeded(
 		return nil, nil
 	}
 
-	kycThreshold, err := convertAmountToReadableString(h.kycThreshold)
+	kycThreshold, err := ConvertAmountToReadableString(h.KycThreshold)
 	if err != nil {
 		return nil, errors.Wrap(err, "converting kycThreshold to human readable string")
 	}
 
 	if rejectedAt.Valid {
-		return NewRejectedTxApprovalResponse(fmt.Sprintf("Your KYC was rejected and you're not authorized for operations above %s %s.", kycThreshold, h.assetCode)), nil
+		return NewRejectedTxApprovalResponse(fmt.Sprintf("Your KYC was rejected and you're not authorized for operations above %s %s.", kycThreshold, h.AssetCode)), nil
 	}
 
 	if pendingAt.Valid {
-		return NewPendingTxApprovalResponse(fmt.Sprintf("Your account could not be verified as approved nor rejected and was marked as pending. You will need staff authorization for operations above %s %s.", kycThreshold, h.assetCode)), nil
+		return NewPendingTxApprovalResponse(fmt.Sprintf("Your account could not be verified as approved nor rejected and was marked as pending. You will need staff authorization for operations above %s %s.", kycThreshold, h.AssetCode)), nil
 	}
 
 	return NewActionRequiredTxApprovalResponse(
-		fmt.Sprintf(`Payments exceeding %s %s require KYC approval. Please provide an email address.`, kycThreshold, h.assetCode),
-		fmt.Sprintf("%s/kyc-status/%s", h.baseURL, callbackID),
+		fmt.Sprintf(`Payments exceeding %s %s require KYC approval. Please provide an email address.`, kycThreshold, h.AssetCode),
+		fmt.Sprintf("%s/kyc-status/%s", h.BaseURL, callbackID),
 		[]string{"email_address"},
 	), nil
 }
