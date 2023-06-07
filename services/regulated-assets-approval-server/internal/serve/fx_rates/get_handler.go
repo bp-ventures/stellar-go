@@ -43,6 +43,9 @@ func (h GetHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		httperror.InternalServer.Render(w)
 		return
 	}
+	if fxRates == nil {
+		fxRates = []FxRate{}
+	}
 	resp := GetHandlerResponse{Data: fxRates}
 	httpjson.RenderStatus(w, 200, resp, httpjson.JSON)
 }
