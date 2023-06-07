@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/stellar/go/support/log"
 
 	"github.com/google/uuid"
 	"github.com/stellar/go/support/errors"
@@ -17,15 +16,20 @@ func (h TxApprove) checkKyc(
 	middleOp *MiddleOperation,
 ) (*txApprovalResponse, error) {
 	//TODO move this check to after the amount check
-	if priceRequiresKyc, err := h.priceRequiresKyc(ctx, middleOp); err != nil {
+	var (
+		priceRequiresKyc  bool
+		amountRequiresKyc bool
+	)
+	priceRequiresKyc, err := h.priceRequiresKyc(ctx, middleOp)
+	if err != nil {
 		return nil, err
-	} else if !priceRequiresKyc {
-		return nil, nil
 	}
-	if amountRequiresKyc, err := h.amountRequiresKyc(middleOp); err != nil {
-		return nil, err
-	} else if !amountRequiresKyc {
-		return nil, nil
+	if !priceRequiresKyc {
+		if amountRequiresKyc, err = h.amountRequiresKyc(middleOp); err != nil {
+			return nil, err
+		} else if !amountRequiresKyc {
+			return nil, nil
+		}
 	}
 
 	intendedCallbackID := uuid.New().String()
@@ -46,7 +50,7 @@ func (h TxApprove) checkKyc(
 		callbackID                        string
 		approvedAt, rejectedAt, pendingAt sql.NullTime
 	)
-	err := h.Db.QueryRowContext(ctx, q, middleOp.SourceAccount, intendedCallbackID).Scan(&callbackID, &approvedAt, &rejectedAt, &pendingAt)
+	err = h.Db.QueryRowContext(ctx, q, middleOp.SourceAccount, intendedCallbackID).Scan(&callbackID, &approvedAt, &rejectedAt, &pendingAt)
 	if err != nil {
 		return nil, errors.Wrap(err, "inserting new row into accounts_kyc_status table")
 	}
@@ -68,8 +72,18 @@ func (h TxApprove) checkKyc(
 		return NewPendingTxApprovalResponse(fmt.Sprintf("Your account could not be verified as approved nor rejected and was marked as pending. You will need staff authorization for operations above %s %s.", kycThreshold, h.AssetCode)), nil
 	}
 
+	var kycMsg string
+	if priceRequiresKyc {
+		kycMsg = fmt.Sprintf("The price contained in the operation is too far " +
+			"off the market price, therefore it requires KYC approval. Please " +
+			"provide an email address.",
+		)
+	} else {
+		kycMsg = fmt.Sprintf("Payments exceeding %s %s require KYC approval. "+
+			"Please provide an email address.", kycThreshold, h.AssetCode)
+	}
 	return NewActionRequiredTxApprovalResponse(
-		fmt.Sprintf(`Payments exceeding %s %s require KYC approval. Please provide an email address.`, kycThreshold, h.AssetCode),
+		kycMsg,
 		fmt.Sprintf("%s/kyc-status/%s", h.BaseURL, callbackID),
 		[]string{"email_address"},
 	), nil
@@ -87,11 +101,9 @@ func (h TxApprove) amountRequiresKyc(middleOp *MiddleOperation) (bool, error) {
 }
 
 func (h TxApprove) priceRequiresKyc(ctx context.Context, middleOp *MiddleOperation) (bool, error) {
-	log.Ctx(ctx).Debug("getting usd price percentage diff")
 	percDiff, err := h.getUsdPricePercentageDiff(ctx, middleOp)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			log.Ctx(ctx).Debug("no rows found")
 			return false, nil
 		}
 		return false, err

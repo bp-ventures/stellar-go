@@ -2,7 +2,6 @@ package tx_approve
 
 import (
 	"context"
-	"github.com/stellar/go/support/log"
 	"math"
 	"strconv"
 
@@ -23,39 +22,49 @@ func (h TxApprove) getUsdPricePercentageDiff(
 	if middleOp.Payment != nil {
 		return 0, errors.New("cannot parse price for payment operation")
 	} else if middleOp.PathPaymentStrictReceive != nil {
-		log.Ctx(ctx).Debug("operation is PathPaymentStrictReceive")
 		sendMaxFloat64, err := strconv.ParseFloat(middleOp.PathPaymentStrictReceive.SendMax, 64)
 		if err != nil {
 			return 0, err
 		}
-		log.Ctx(ctx).Debugf("sendMaxFloat64: %f", sendMaxFloat64)
 		destAmountFloat64, err := strconv.ParseFloat(middleOp.PathPaymentStrictReceive.DestAmount, 64)
 		if err != nil {
 			return 0, err
 		}
-		log.Ctx(ctx).Debugf("destAmountFloat64: %f", destAmountFloat64)
 		dbSendUsdRate, err := h.scanUsdRate(ctx, query, middleOp.PathPaymentStrictReceive.SendAsset)
 		if err != nil {
 			return 0, err
 		}
-		log.Ctx(ctx).Debugf("dbSendUsdRate: %f", dbSendUsdRate)
 		dbDestUsdRate, err := h.scanUsdRate(ctx, query, middleOp.PathPaymentStrictReceive.DestAsset)
 		if err != nil {
 			return 0, err
 		}
-		log.Ctx(ctx).Debugf("dbDestUsdRate: %f", dbDestUsdRate)
 		opRate := destAmountFloat64 / sendMaxFloat64
-		log.Ctx(ctx).Debugf("opRate: %f", opRate)
 		dbRate := dbDestUsdRate / dbSendUsdRate
-		log.Ctx(ctx).Debugf("dbRate: %f", dbRate)
 		diff := math.Abs(opRate - dbRate)
-		log.Ctx(ctx).Debugf("diff: %f", diff)
 		percDiff := diff / dbRate * 100
-		log.Ctx(ctx).Debugf("percDiff: %f", percDiff)
 		return percDiff, nil
 	} else if middleOp.PathPaymentStrictSend != nil {
-		//TODO
-		return 0, nil
+		sendAmountFloat64, err := strconv.ParseFloat(middleOp.PathPaymentStrictSend.SendAmount, 64)
+		if err != nil {
+			return 0, err
+		}
+		destMinFloat64, err := strconv.ParseFloat(middleOp.PathPaymentStrictSend.DestMin, 64)
+		if err != nil {
+			return 0, err
+		}
+		dbSendUsdRate, err := h.scanUsdRate(ctx, query, middleOp.PathPaymentStrictSend.SendAsset)
+		if err != nil {
+			return 0, err
+		}
+		dbDestUsdRate, err := h.scanUsdRate(ctx, query, middleOp.PathPaymentStrictSend.DestAsset)
+		if err != nil {
+			return 0, err
+		}
+		opRate := destMinFloat64 / sendAmountFloat64
+		dbRate := dbDestUsdRate / dbSendUsdRate
+		diff := math.Abs(opRate - dbRate)
+		percDiff := diff / dbRate * 100
+		return percDiff, nil
 	} else if middleOp.ManageSellOffer != nil {
 		//TODO
 		return 0, nil
@@ -68,12 +77,23 @@ func (h TxApprove) getUsdPricePercentageDiff(
 }
 
 func (h TxApprove) scanUsdRate(ctx context.Context, query string, asset txnbuild.Asset) (float64, error) {
-	var usdRate string
+	var (
+		usdRate     string
+		assetCode   string
+		assetIssuer string
+	)
+	if asset.IsNative() {
+		assetCode = "XLM"
+		assetIssuer = ""
+	} else {
+		assetCode = asset.GetCode()
+		assetIssuer = asset.GetIssuer()
+	}
 	err := h.Db.QueryRowContext(
 		ctx,
 		query,
-		asset.GetCode(),
-		asset.GetIssuer(),
+		assetCode,
+		assetIssuer,
 	).Scan(&usdRate)
 	if err != nil {
 		return 0, err
