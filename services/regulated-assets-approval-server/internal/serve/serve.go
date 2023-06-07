@@ -120,9 +120,9 @@ func handleHTTP(opts Options) http.Handler {
 		mux.Get("/", fx_rates.GetHandler{
 			Db: db,
 		}.ServeHTTP)
-		//mux.Post("/", fx_rates.PostHandler{
-		//	Db: db,
-		//}.ServeHTTP)
+		mux.Post("/", fx_rates.PostHandler{
+			Db: db,
+		}.ServeHTTP)
 	})
 
 	return mux

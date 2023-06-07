@@ -5,6 +5,8 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	"github.com/stellar/go/services/regulated-assets-approval-server/internal/serve/httperror"
+	"github.com/stellar/go/support/errors"
+	"github.com/stellar/go/support/log"
 	"github.com/stellar/go/support/render/httpjson"
 )
 
@@ -16,16 +18,21 @@ type GetHandlerResponse struct {
 	Data []FxRate `json:"data"`
 }
 
-type FxRate struct {
-	Id            string `json:"id" db:"id"`
-	AssetCode     string `json:"asset_code" db:"asset_code"`
-	AssetIssuer   string `json:"asset_issuer" db:"asset_issuer"`
-	UsdRate       string `json:"usd_rate" db:"usd_rate"`
-	RateTimestamp string `json:"rate_timestamp" db:"rate_timestamp"`
+func (h GetHandler) validate() error {
+	if h.Db == nil {
+		return errors.New("database cannot be nil")
+	}
+	return nil
 }
 
 func (h GetHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	err := h.validate()
+	if err != nil {
+		log.Ctx(ctx).Error(errors.Wrap(err, "validating fx-rates GetHandler"))
+		httperror.InternalServer.Render(w)
+		return
+	}
 	const query = `
 		SELECT id, asset_code, asset_issuer, usd_rate, rate_timestamp
 		FROM fx_rates
