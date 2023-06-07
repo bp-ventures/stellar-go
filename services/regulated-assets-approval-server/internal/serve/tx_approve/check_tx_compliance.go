@@ -24,6 +24,9 @@ func (h TxApprove) checkTxCompliance(
 	if rejectedResp != nil {
 		return rejectedResp, nil
 	}
+	if middleOp == nil {
+		return nil, nil
+	}
 
 	// 2. poll account from blockchain and check sequence number
 	acc, err := h.HorizonClient.AccountDetail(horizonclient.AccountRequest{AccountID: middleOp.SourceAccount})
