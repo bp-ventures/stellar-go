@@ -72,5 +72,5 @@ func (h stellarTOMLHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(rw, "issuer=%q\n", h.issuerAddress)
 	fmt.Fprintf(rw, "regulated=true\n")
 	fmt.Fprintf(rw, "approval_server=%q\n", h.approvalServer)
-	fmt.Fprintf(rw, "approval_criteria=\"The approval server currently only accepts payments and offers. The transaction must have exactly one operation of type payment or offer. If the payment/offer amount exceeds %s %s it will need KYC approval if the account hasn’t been previously approved.\"", kycThreshold, h.assetCode)
+	fmt.Fprintf(rw, "approval_criteria=\"The approval server currently only accepts payments path payments. The transaction must have exactly one operation of type payment or path payment. If the payment/path payment amount exceeds %s %s it will need KYC approval if the account hasn’t been previously approved.\"", kycThreshold, h.assetCode)
 }

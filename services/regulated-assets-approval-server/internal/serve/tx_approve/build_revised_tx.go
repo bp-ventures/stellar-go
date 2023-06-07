@@ -9,100 +9,44 @@ func (h TxApprove) buildRevisedTx(
 	acc txnbuild.Account,
 	middleOp *MiddleOperation,
 ) (string, error) {
-	asset, err := h.getRegulatedAsset(middleOp)
-	if err != nil {
-		return "", errors.New("asset is not supported")
-	}
+	asset, _ := h.getRegulatedAsset(middleOp)
 	issuerAddress := h.IssuerKP.Address()
 	var revisedOperations []txnbuild.Operation
-	if middleOp.ManageSellOffer != nil {
-		revisedOperations = []txnbuild.Operation{
-			&txnbuild.SetTrustLineFlags{
-				SourceAccount: issuerAddress,
-				Trustor:       middleOp.SourceAccount,
-				Asset:         asset,
-				SetFlags: []txnbuild.TrustLineFlag{
-					txnbuild.TrustLineAuthorized,
-					txnbuild.TrustLineAuthorizedToMaintainLiabilities,
-				},
-			},
-			middleOp.ManageSellOffer,
-			&txnbuild.SetTrustLineFlags{
-				SourceAccount: issuerAddress,
-				Trustor:       middleOp.SourceAccount,
-				Asset:         asset,
-				ClearFlags: []txnbuild.TrustLineFlag{
-					txnbuild.TrustLineAuthorized,
-					// Here we'd add txnbuild.TrustLineAuthorizedToMaintainLiabilities,
-					// but this would prevent the account from creating offers.
-				},
-			},
-		}
+	if middleOp.Payment != nil {
+		revisedOperations = h.buildRevisedOperationsPayment(
+			acc,
+			middleOp,
+			asset,
+			issuerAddress,
+		)
+	} else if middleOp.PathPaymentStrictReceive != nil {
+		revisedOperations = h.buildRevisedOperationsPathReceive(
+			acc,
+			middleOp,
+			asset,
+			issuerAddress,
+		)
+	} else if middleOp.PathPaymentStrictSend != nil {
+		revisedOperations = h.buildRevisedOperationsPathSend(
+			acc,
+			middleOp,
+			asset,
+			issuerAddress,
+		)
+	} else if middleOp.ManageSellOffer != nil {
+		revisedOperations = h.buildRevisedOperationsManageSellOffer(
+			acc,
+			middleOp,
+			asset,
+			issuerAddress,
+		)
 	} else if middleOp.ManageBuyOffer != nil {
-		revisedOperations = []txnbuild.Operation{
-			&txnbuild.SetTrustLineFlags{
-				SourceAccount: issuerAddress,
-				Trustor:       middleOp.SourceAccount,
-				Asset:         asset,
-				SetFlags: []txnbuild.TrustLineFlag{
-					txnbuild.TrustLineAuthorized,
-					txnbuild.TrustLineAuthorizedToMaintainLiabilities,
-				},
-			},
-			middleOp.ManageBuyOffer,
-			&txnbuild.SetTrustLineFlags{
-				SourceAccount: issuerAddress,
-				Trustor:       middleOp.SourceAccount,
-				Asset:         asset,
-				ClearFlags: []txnbuild.TrustLineFlag{
-					txnbuild.TrustLineAuthorized,
-					// Here we'd add txnbuild.TrustLineAuthorizedToMaintainLiabilities,
-					// but this would prevent the account from creating offers.
-				},
-			},
-		}
-	} else if middleOp.Payment != nil {
-		revisedOperations = []txnbuild.Operation{
-			&txnbuild.SetTrustLineFlags{
-				SourceAccount: issuerAddress,
-				Trustor:       middleOp.SourceAccount,
-				Asset:         asset,
-				SetFlags: []txnbuild.TrustLineFlag{
-					txnbuild.TrustLineAuthorized,
-					txnbuild.TrustLineAuthorizedToMaintainLiabilities,
-				},
-			},
-			&txnbuild.SetTrustLineFlags{
-				SourceAccount: issuerAddress,
-				Trustor:       middleOp.Payment.Destination,
-				Asset:         asset,
-				SetFlags: []txnbuild.TrustLineFlag{
-					txnbuild.TrustLineAuthorized,
-					txnbuild.TrustLineAuthorizedToMaintainLiabilities,
-				},
-			},
-			middleOp.Payment,
-			&txnbuild.SetTrustLineFlags{
-				SourceAccount: issuerAddress,
-				Trustor:       middleOp.SourceAccount,
-				Asset:         asset,
-				ClearFlags: []txnbuild.TrustLineFlag{
-					txnbuild.TrustLineAuthorized,
-					// Here we'd add txnbuild.TrustLineAuthorizedToMaintainLiabilities,
-					// but this would prevent the account from creating offers.
-				},
-			},
-			&txnbuild.SetTrustLineFlags{
-				SourceAccount: issuerAddress,
-				Trustor:       middleOp.Payment.Destination,
-				Asset:         asset,
-				ClearFlags: []txnbuild.TrustLineFlag{
-					txnbuild.TrustLineAuthorized,
-					// Here we'd add txnbuild.TrustLineAuthorizedToMaintainLiabilities,
-					// but this would prevent the account from creating offers.
-				},
-			},
-		}
+		revisedOperations = h.buildRevisedOperationsManageBuyOffer(
+			acc,
+			middleOp,
+			asset,
+			issuerAddress,
+		)
 	} else {
 		return "", errors.New("middle operation has all nil")
 	}

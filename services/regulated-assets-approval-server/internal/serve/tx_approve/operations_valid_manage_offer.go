@@ -17,19 +17,13 @@ func (h TxApprove) operationsValidManageOffer(
 			txnbuild.TrustLineAuthorizedToMaintainLiabilities,
 		}) ||
 		op0.Trustor != middleOp.SourceAccount ||
-		op0.Asset.GetIssuer() != issuerAddress {
+		!h.isRegulatedAsset(op0.Asset) {
 		return false
 	}
 	_, ok = tx.Operations()[1].(*txnbuild.ManageSellOffer)
-	if ok {
-		//TODO check price slippage against database
-		//TODO check amount
-	} else {
+	if !ok {
 		_, ok = tx.Operations()[1].(*txnbuild.ManageBuyOffer)
-		if ok {
-			//TODO check price slippage against database
-			//TODO check amount
-		} else {
+		if !ok {
 			return false
 		}
 	}
@@ -40,7 +34,7 @@ func (h TxApprove) operationsValidManageOffer(
 			txnbuild.TrustLineAuthorized,
 		}) ||
 		op2.Trustor != middleOp.SourceAccount ||
-		op2.Asset.GetIssuer() != issuerAddress {
+		!h.isRegulatedAsset(op2.Asset) {
 		return false
 	}
 	return true

@@ -96,13 +96,13 @@ func handleHTTP(opts Options) http.Handler {
 		paymentAmount:       opts.FriendbotPaymentAmount,
 	}.ServeHTTP)
 	mux.Post("/tx-approve", tx_approve.TxApprove{
-		AssetCode:         opts.AssetCode,
-		IssuerKP:          issuerKP,
-		HorizonClient:     opts.horizonClient(),
-		NetworkPassphrase: opts.NetworkPassphrase,
-		Db:                db,
-		KycThreshold:      parsedKYCRequiredPaymentThreshold,
-		BaseURL:           opts.BaseURL,
+		AssetCode:           opts.AssetCode,
+		IssuerKP:            issuerKP,
+		HorizonClient:       opts.horizonClient(),
+		NetworkPassphrase:   opts.NetworkPassphrase,
+		Db:                  db,
+		KycPaymentThreshold: parsedKYCRequiredPaymentThreshold,
+		BaseURL:             opts.BaseURL,
 	}.ServeHTTP)
 	mux.Route("/kyc-status", func(mux chi.Router) {
 		mux.Post("/{callback_id}", kycstatus.PostHandler{

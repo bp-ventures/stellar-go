@@ -21,7 +21,7 @@ func (h TxApprove) validate() error {
 	if h.Db == nil {
 		return errors.New("database cannot be nil")
 	}
-	if h.KycThreshold <= 0 {
+	if h.KycPaymentThreshold <= 0 {
 		return errors.New("kyc threshold cannot be less than or equal to zero")
 	}
 	if h.BaseURL == "" {

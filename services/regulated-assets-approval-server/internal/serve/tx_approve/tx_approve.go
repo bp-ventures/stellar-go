@@ -18,13 +18,14 @@ import (
 )
 
 type TxApprove struct {
-	IssuerKP          *keypair.Full
-	AssetCode         string
-	HorizonClient     horizonclient.ClientInterface
-	NetworkPassphrase string
-	Db                *sqlx.DB
-	KycThreshold      int64
-	BaseURL           string
+	IssuerKP            *keypair.Full
+	AssetCode           string
+	HorizonClient       horizonclient.ClientInterface
+	NetworkPassphrase   string
+	Db                  *sqlx.DB
+	KycPaymentThreshold int64
+	KycOfferThreshold   int64
+	BaseURL             string
 }
 
 func (h TxApprove) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -112,11 +113,15 @@ func (h TxApprove) txApprove(
 	// 2. check if the operation is supported
 	middleOp := extractMiddleOperation(tx)
 	if middleOp == nil {
-		return NewRejectedTxApprovalResponse("Unexpected operation in the transaction. Support operations: Payment, ManageSellOffer, ManageBuyOffer."), nil
+		return NewRejectedTxApprovalResponse("Unexpected operation in the transaction"), nil
 	}
 
 	// 3. check if asset in the operation is our regulated asset
-	if middleOp.Payment != nil && middleOp.Payment.Destination == h.IssuerKP.Address() {
+	if (middleOp.Payment != nil && middleOp.Payment.Destination == h.IssuerKP.Address()) ||
+		(middleOp.PathPaymentStrictReceive != nil &&
+			middleOp.PathPaymentStrictReceive.Destination == h.IssuerKP.Address()) ||
+		(middleOp.PathPaymentStrictSend != nil &&
+			middleOp.PathPaymentStrictSend.Destination == h.IssuerKP.Address()) {
 		return NewRejectedTxApprovalResponse("Can't transfer asset to its issuer."), nil
 	}
 	if _, err := h.getRegulatedAsset(middleOp); err != nil {

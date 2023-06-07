@@ -4,7 +4,7 @@ import (
 	"github.com/stellar/go/txnbuild"
 )
 
-func (h TxApprove) operationsValidPayment(
+func (h TxApprove) operationsValidPathPaymentStrictReceive(
 	tx *txnbuild.Transaction,
 	middleOp *MiddleOperation,
 ) bool {
@@ -25,14 +25,16 @@ func (h TxApprove) operationsValidPayment(
 		!containsTrustLineFlags(op1.SetFlags, []txnbuild.TrustLineFlag{
 			txnbuild.TrustLineAuthorized,
 		}) ||
-		op1.Trustor != middleOp.Payment.Destination ||
+		op1.Trustor != middleOp.PathPaymentStrictReceive.Destination ||
 		!h.isRegulatedAsset(op1.Asset) {
 		return false
 	}
-	_, ok = tx.Operations()[2].(*txnbuild.Payment)
+
+	_, ok = tx.Operations()[2].(*txnbuild.PathPaymentStrictReceive)
 	if !ok {
 		return false
 	}
+
 	op3, ok := tx.Operations()[3].(*txnbuild.SetTrustLineFlags)
 	if !ok ||
 		op3.SourceAccount != issuerAddress ||
@@ -49,7 +51,7 @@ func (h TxApprove) operationsValidPayment(
 		!containsTrustLineFlags(op4.ClearFlags, []txnbuild.TrustLineFlag{
 			txnbuild.TrustLineAuthorized,
 		}) ||
-		op4.Trustor != middleOp.Payment.Destination ||
+		op4.Trustor != middleOp.PathPaymentStrictReceive.Destination ||
 		!h.isRegulatedAsset(op4.Asset) {
 		return false
 	}

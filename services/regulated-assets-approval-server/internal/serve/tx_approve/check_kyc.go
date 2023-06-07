@@ -19,7 +19,7 @@ func (h TxApprove) checkKyc(
 	if err != nil {
 		return nil, err
 	}
-	if amountInt64 <= h.KycThreshold {
+	if amountInt64 <= h.KycPaymentThreshold {
 		return nil, nil
 	}
 
@@ -50,7 +50,7 @@ func (h TxApprove) checkKyc(
 		return nil, nil
 	}
 
-	kycThreshold, err := ConvertAmountToReadableString(h.KycThreshold)
+	kycThreshold, err := ConvertAmountToReadableString(h.KycPaymentThreshold)
 	if err != nil {
 		return nil, errors.Wrap(err, "converting kycThreshold to human readable string")
 	}
