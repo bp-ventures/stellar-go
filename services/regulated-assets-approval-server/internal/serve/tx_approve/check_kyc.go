@@ -19,10 +19,15 @@ func (h TxApprove) checkKyc(
 	var (
 		priceRequiresKyc  bool
 		amountRequiresKyc bool
+		err               error
 	)
-	priceRequiresKyc, err := h.priceRequiresKyc(ctx, middleOp)
-	if err != nil {
-		return nil, err
+	if middleOp.Payment == nil {
+		priceRequiresKyc, err = h.priceRequiresKyc(ctx, middleOp)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		priceRequiresKyc = false
 	}
 	if !priceRequiresKyc {
 		if amountRequiresKyc, err = h.amountRequiresKyc(middleOp); err != nil {
