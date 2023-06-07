@@ -12,13 +12,6 @@ import (
 func (h TxApprove) getUsdPricePercentageDiff(
 	ctx context.Context,
 	middleOp *MiddleOperation) (float64, error) {
-	const query = `
-		SELECT usd_rate
-		FROM fx_rates
-		WHERE asset_code = $1 AND
-			  asset_issuer = $2
-		ORDER BY rate_timestamp DESC
-	`
 	if middleOp.Payment != nil {
 		return 0, errors.New("cannot parse price for payment operation")
 	} else if middleOp.PathPaymentStrictReceive != nil {
@@ -30,11 +23,11 @@ func (h TxApprove) getUsdPricePercentageDiff(
 		if err != nil {
 			return 0, err
 		}
-		dbSendUsdRate, err := h.scanUsdRate(ctx, query, middleOp.PathPaymentStrictReceive.SendAsset)
+		dbSendUsdRate, err := h.scanUsdRate(ctx, middleOp.PathPaymentStrictReceive.SendAsset)
 		if err != nil {
 			return 0, err
 		}
-		dbDestUsdRate, err := h.scanUsdRate(ctx, query, middleOp.PathPaymentStrictReceive.DestAsset)
+		dbDestUsdRate, err := h.scanUsdRate(ctx, middleOp.PathPaymentStrictReceive.DestAsset)
 		if err != nil {
 			return 0, err
 		}
@@ -52,11 +45,11 @@ func (h TxApprove) getUsdPricePercentageDiff(
 		if err != nil {
 			return 0, err
 		}
-		dbSendUsdRate, err := h.scanUsdRate(ctx, query, middleOp.PathPaymentStrictSend.SendAsset)
+		dbSendUsdRate, err := h.scanUsdRate(ctx, middleOp.PathPaymentStrictSend.SendAsset)
 		if err != nil {
 			return 0, err
 		}
-		dbDestUsdRate, err := h.scanUsdRate(ctx, query, middleOp.PathPaymentStrictSend.DestAsset)
+		dbDestUsdRate, err := h.scanUsdRate(ctx, middleOp.PathPaymentStrictSend.DestAsset)
 		if err != nil {
 			return 0, err
 		}
@@ -76,7 +69,14 @@ func (h TxApprove) getUsdPricePercentageDiff(
 	}
 }
 
-func (h TxApprove) scanUsdRate(ctx context.Context, query string, asset txnbuild.Asset) (float64, error) {
+func (h TxApprove) scanUsdRate(ctx context.Context, asset txnbuild.Asset) (float64, error) {
+	const query = `
+		SELECT usd_rate
+		FROM fx_rates
+		WHERE asset_code = $1 AND
+			  asset_issuer = $2
+		ORDER BY rate_timestamp DESC
+	`
 	var (
 		usdRate     string
 		assetCode   string

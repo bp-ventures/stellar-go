@@ -13,6 +13,7 @@ import (
 	"github.com/stellar/go/clients/horizonclient"
 	"github.com/stellar/go/keypair"
 	"github.com/stellar/go/services/regulated-assets-approval-server/internal/db"
+	"github.com/stellar/go/services/regulated-assets-approval-server/internal/serve/fx_rates"
 	"github.com/stellar/go/services/regulated-assets-approval-server/internal/serve/kycstatus"
 	"github.com/stellar/go/services/regulated-assets-approval-server/internal/serve/tx_approve"
 	"github.com/stellar/go/support/errors"
@@ -114,6 +115,14 @@ func handleHTTP(opts Options) http.Handler {
 		mux.Delete("/{stellar_address}", kycstatus.DeleteHandler{
 			DB: db,
 		}.ServeHTTP)
+	})
+	mux.Route("/fx-rates", func(mux chi.Router) {
+		mux.Get("/", fx_rates.GetHandler{
+			Db: db,
+		}.ServeHTTP)
+		//mux.Post("/", fx_rates.PostHandler{
+		//	Db: db,
+		//}.ServeHTTP)
 	})
 
 	return mux
