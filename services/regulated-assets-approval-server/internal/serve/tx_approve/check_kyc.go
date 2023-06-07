@@ -15,11 +15,9 @@ func (h TxApprove) checkKyc(
 	ctx context.Context,
 	middleOp *MiddleOperation,
 ) (*txApprovalResponse, error) {
-	amountInt64, err := h.parseAmount(middleOp)
-	if err != nil {
+	if amountRequiresKyc, err := h.amountRequiresKyc(middleOp); err != nil {
 		return nil, err
-	}
-	if amountInt64 <= h.KycPaymentThreshold {
+	} else if !amountRequiresKyc {
 		return nil, nil
 	}
 
@@ -68,4 +66,23 @@ func (h TxApprove) checkKyc(
 		fmt.Sprintf("%s/kyc-status/%s", h.BaseURL, callbackID),
 		[]string{"email_address"},
 	), nil
+}
+
+func (h TxApprove) amountRequiresKyc(middleOp *MiddleOperation) (bool, error) {
+	amountInt64, err := h.parseAmount(middleOp)
+	if err != nil {
+		return false, err
+	}
+	if amountInt64 <= h.KycPaymentThreshold {
+		return false, nil
+	}
+	return true, nil
+}
+
+func (h TxApprove) priceRequiresKyc(middleOp *MiddleOperation) (bool, error) {
+	priceFloat64, err := h.parsePrice(middleOp)
+	if err != nil {
+		return false, err
+	}
+	// TODO wip
 }
