@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/stellar/go/support/log"
 
 	"github.com/google/uuid"
 	"github.com/stellar/go/support/errors"
@@ -15,6 +16,12 @@ func (h TxApprove) checkKyc(
 	ctx context.Context,
 	middleOp *MiddleOperation,
 ) (*txApprovalResponse, error) {
+	//TODO move this check to after the amount check
+	if priceRequiresKyc, err := h.priceRequiresKyc(ctx, middleOp); err != nil {
+		return nil, err
+	} else if !priceRequiresKyc {
+		return nil, nil
+	}
 	if amountRequiresKyc, err := h.amountRequiresKyc(middleOp); err != nil {
 		return nil, err
 	} else if !amountRequiresKyc {
@@ -39,7 +46,7 @@ func (h TxApprove) checkKyc(
 		callbackID                        string
 		approvedAt, rejectedAt, pendingAt sql.NullTime
 	)
-	err = h.Db.QueryRowContext(ctx, q, middleOp.SourceAccount, intendedCallbackID).Scan(&callbackID, &approvedAt, &rejectedAt, &pendingAt)
+	err := h.Db.QueryRowContext(ctx, q, middleOp.SourceAccount, intendedCallbackID).Scan(&callbackID, &approvedAt, &rejectedAt, &pendingAt)
 	if err != nil {
 		return nil, errors.Wrap(err, "inserting new row into accounts_kyc_status table")
 	}
@@ -79,10 +86,18 @@ func (h TxApprove) amountRequiresKyc(middleOp *MiddleOperation) (bool, error) {
 	return true, nil
 }
 
-func (h TxApprove) priceRequiresKyc(middleOp *MiddleOperation) (bool, error) {
-	priceFloat64, err := h.parsePrice(middleOp)
+func (h TxApprove) priceRequiresKyc(ctx context.Context, middleOp *MiddleOperation) (bool, error) {
+	log.Ctx(ctx).Debug("getting usd price percentage diff")
+	percDiff, err := h.getUsdPricePercentageDiff(ctx, middleOp)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			log.Ctx(ctx).Debug("no rows found")
+			return false, nil
+		}
 		return false, err
 	}
-	// TODO wip
+	if percDiff > 5.0 {
+		return true, nil
+	}
+	return false, nil
 }

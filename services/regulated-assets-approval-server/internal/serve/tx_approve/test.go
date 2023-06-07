@@ -75,37 +75,37 @@ func TestTxApproveHandlerValidate(t *testing.T) {
 
 	// Negative kycThreshold.
 	h = TxApprove{
-		IssuerKP:          issuerAccKeyPair,
-		AssetCode:         "FOOBAR",
-		HorizonClient:     &horizonMock,
-		NetworkPassphrase: network.TestNetworkPassphrase,
-		Db:                conn,
-		KycPaymentThreshold:      -1,
+		IssuerKP:            issuerAccKeyPair,
+		AssetCode:           "FOOBAR",
+		HorizonClient:       &horizonMock,
+		NetworkPassphrase:   network.TestNetworkPassphrase,
+		Db:                  conn,
+		KycPaymentThreshold: -1,
 	}
 	err = h.validate()
 	require.EqualError(t, err, "kyc threshold cannot be less than or equal to zero")
 
 	// no baseURL.
 	h = TxApprove{
-		IssuerKP:          issuerAccKeyPair,
-		AssetCode:         "FOOBAR",
-		HorizonClient:     &horizonMock,
-		NetworkPassphrase: network.TestNetworkPassphrase,
-		Db:                conn,
-		KycPaymentThreshold:      1,
+		IssuerKP:            issuerAccKeyPair,
+		AssetCode:           "FOOBAR",
+		HorizonClient:       &horizonMock,
+		NetworkPassphrase:   network.TestNetworkPassphrase,
+		Db:                  conn,
+		KycPaymentThreshold: 1,
 	}
 	err = h.validate()
 	require.EqualError(t, err, "base url cannot be empty")
 
 	// Success.
 	h = TxApprove{
-		IssuerKP:          issuerAccKeyPair,
-		AssetCode:         "FOOBAR",
-		HorizonClient:     &horizonMock,
-		NetworkPassphrase: network.TestNetworkPassphrase,
-		Db:                conn,
-		KycPaymentThreshold:      1,
-		BaseURL:           "https://example.com",
+		IssuerKP:            issuerAccKeyPair,
+		AssetCode:           "FOOBAR",
+		HorizonClient:       &horizonMock,
+		NetworkPassphrase:   network.TestNetworkPassphrase,
+		Db:                  conn,
+		KycPaymentThreshold: 1,
+		BaseURL:             "https://example.com",
 	}
 	err = h.validate()
 	require.NoError(t, err)
@@ -227,10 +227,10 @@ func TestTxApproveHandler_handleActionRequiredResponseIfNeeded(t *testing.T) {
 	kycThreshold, err := amount.ParseInt64("500")
 	require.NoError(t, err)
 	h := TxApprove{
-		AssetCode:    "FOO",
-		BaseURL:      "https://example.com",
+		AssetCode:           "FOO",
+		BaseURL:             "https://example.com",
 		KycPaymentThreshold: kycThreshold,
-		Db:           conn,
+		Db:                  conn,
 	}
 
 	// payments up to the the threshold won't trigger "action_required"
@@ -351,13 +351,13 @@ func TestTxApproveHandler_txApprove_rejected(t *testing.T) {
 		}, nil)
 
 	handler := TxApprove{
-		IssuerKP:          issuerKP,
-		AssetCode:         assetGOAT.GetCode(),
-		HorizonClient:     &horizonMock,
-		NetworkPassphrase: network.TestNetworkPassphrase,
-		Db:                conn,
-		KycPaymentThreshold:      kycThresholdAmount,
-		BaseURL:           "https://example.com",
+		IssuerKP:            issuerKP,
+		AssetCode:           assetGOAT.GetCode(),
+		HorizonClient:       &horizonMock,
+		NetworkPassphrase:   network.TestNetworkPassphrase,
+		Db:                  conn,
+		KycPaymentThreshold: kycThresholdAmount,
+		BaseURL:             "https://example.com",
 	}
 
 	// "rejected" if tx is empty
@@ -535,13 +535,13 @@ func TestTxApproveHandler_txApprove_success(t *testing.T) {
 		}, nil)
 
 	handler := TxApprove{
-		IssuerKP:          issuerKP,
-		AssetCode:         assetGOAT.GetCode(),
-		HorizonClient:     &horizonMock,
-		NetworkPassphrase: network.TestNetworkPassphrase,
-		Db:                conn,
-		KycPaymentThreshold:      kycThresholdAmount,
-		BaseURL:           "https://example.com",
+		IssuerKP:            issuerKP,
+		AssetCode:           assetGOAT.GetCode(),
+		HorizonClient:       &horizonMock,
+		NetworkPassphrase:   network.TestNetworkPassphrase,
+		Db:                  conn,
+		KycPaymentThreshold: kycThresholdAmount,
+		BaseURL:             "https://example.com",
 	}
 
 	tx, err := txnbuild.NewTransaction(
@@ -622,13 +622,13 @@ func TestTxApproveHandler_txApprove_actionRequired(t *testing.T) {
 		}, nil)
 
 	handler := TxApprove{
-		IssuerKP:          issuerKP,
-		AssetCode:         assetGOAT.GetCode(),
-		HorizonClient:     &horizonMock,
-		NetworkPassphrase: network.TestNetworkPassphrase,
-		Db:                conn,
-		KycPaymentThreshold:      kycThresholdAmount,
-		BaseURL:           "https://example.com",
+		IssuerKP:            issuerKP,
+		AssetCode:           assetGOAT.GetCode(),
+		HorizonClient:       &horizonMock,
+		NetworkPassphrase:   network.TestNetworkPassphrase,
+		Db:                  conn,
+		KycPaymentThreshold: kycThresholdAmount,
+		BaseURL:             "https://example.com",
 	}
 
 	tx, err := txnbuild.NewTransaction(
@@ -698,13 +698,13 @@ func TestTxApproveHandler_txApprove_revised(t *testing.T) {
 		}, nil)
 
 	handler := TxApprove{
-		IssuerKP:          issuerKP,
-		AssetCode:         assetGOAT.GetCode(),
-		HorizonClient:     &horizonMock,
-		NetworkPassphrase: network.TestNetworkPassphrase,
-		Db:                conn,
-		KycPaymentThreshold:      kycThresholdAmount,
-		BaseURL:           "https://example.com",
+		IssuerKP:            issuerKP,
+		AssetCode:           assetGOAT.GetCode(),
+		HorizonClient:       &horizonMock,
+		NetworkPassphrase:   network.TestNetworkPassphrase,
+		Db:                  conn,
+		KycPaymentThreshold: kycThresholdAmount,
+		BaseURL:             "https://example.com",
 	}
 
 	tx, err := txnbuild.NewTransaction(
@@ -789,11 +789,11 @@ func TestValidateTransactionOperationsForSuccess(t *testing.T) {
 	}
 	kycThreshold, err := amount.ParseInt64("500")
 	h := TxApprove{
-		AssetCode:    "GOAT",
-		IssuerKP:     issuerKP,
-		BaseURL:      "https://example.com",
+		AssetCode:           "GOAT",
+		IssuerKP:            issuerKP,
+		BaseURL:             "https://example.com",
 		KycPaymentThreshold: kycThreshold,
-		Db:           conn,
+		Db:                  conn,
 	}
 
 	// rejected if number of operations is unsupported
@@ -1001,13 +1001,13 @@ func TestTxApproveHandler_handleSuccessResponseIfNeeded_revisable(t *testing.T) 
 		}, nil)
 
 	handler := TxApprove{
-		IssuerKP:          issuerKP,
-		AssetCode:         assetGOAT.GetCode(),
-		HorizonClient:     &horizonMock,
-		NetworkPassphrase: network.TestNetworkPassphrase,
-		Db:                conn,
-		KycPaymentThreshold:      kycThresholdAmount,
-		BaseURL:           "https://example.com",
+		IssuerKP:            issuerKP,
+		AssetCode:           assetGOAT.GetCode(),
+		HorizonClient:       &horizonMock,
+		NetworkPassphrase:   network.TestNetworkPassphrase,
+		Db:                  conn,
+		KycPaymentThreshold: kycThresholdAmount,
+		BaseURL:             "https://example.com",
 	}
 
 	revisableTx, err := txnbuild.NewTransaction(txnbuild.TransactionParams{
@@ -1060,13 +1060,13 @@ func TestTxApproveHandler_handleSuccessResponseIfNeeded_rejected(t *testing.T) {
 		}, nil)
 
 	handler := TxApprove{
-		IssuerKP:          issuerKP,
-		AssetCode:         assetGOAT.GetCode(),
-		HorizonClient:     &horizonMock,
-		NetworkPassphrase: network.TestNetworkPassphrase,
-		Db:                conn,
-		KycPaymentThreshold:      kycThresholdAmount,
-		BaseURL:           "https://example.com",
+		IssuerKP:            issuerKP,
+		AssetCode:           assetGOAT.GetCode(),
+		HorizonClient:       &horizonMock,
+		NetworkPassphrase:   network.TestNetworkPassphrase,
+		Db:                  conn,
+		KycPaymentThreshold: kycThresholdAmount,
+		BaseURL:             "https://example.com",
 	}
 
 	// rejected if operations don't match the expected format
@@ -1221,13 +1221,13 @@ func TestTxApproveHandler_handleSuccessResponseIfNeeded_actionRequired(t *testin
 		}, nil)
 
 	handler := TxApprove{
-		IssuerKP:          issuerKP,
-		AssetCode:         assetGOAT.GetCode(),
-		HorizonClient:     &horizonMock,
-		NetworkPassphrase: network.TestNetworkPassphrase,
-		Db:                conn,
-		KycPaymentThreshold:      kycThresholdAmount,
-		BaseURL:           "https://example.com",
+		IssuerKP:            issuerKP,
+		AssetCode:           assetGOAT.GetCode(),
+		HorizonClient:       &horizonMock,
+		NetworkPassphrase:   network.TestNetworkPassphrase,
+		Db:                  conn,
+		KycPaymentThreshold: kycThresholdAmount,
+		BaseURL:             "https://example.com",
 	}
 
 	// compliant operations with a payment above threshold will return "action_required" if the user hasn't gone through KYC yet
@@ -1352,11 +1352,11 @@ func TestTxApproveHandler_handleSuccessResponseIfNeeded_success(t *testing.T) {
 	kycThresholdAmount, err := amount.ParseInt64("500")
 	require.NoError(t, err)
 	h := TxApprove{
-		AssetCode:    "GOAT",
-		IssuerKP:     issuerKP,
-		BaseURL:      "https://example.com",
+		AssetCode:           "GOAT",
+		IssuerKP:            issuerKP,
+		BaseURL:             "https://example.com",
 		KycPaymentThreshold: kycThresholdAmount,
-		Db:           conn,
+		Db:                  conn,
 	}
 
 	horizonMock := horizonclient.MockClient{}
@@ -1368,13 +1368,13 @@ func TestTxApproveHandler_handleSuccessResponseIfNeeded_success(t *testing.T) {
 		}, nil)
 
 	handler := TxApprove{
-		IssuerKP:          issuerKP,
-		AssetCode:         assetGOAT.GetCode(),
-		HorizonClient:     &horizonMock,
-		NetworkPassphrase: network.TestNetworkPassphrase,
-		Db:                conn,
-		KycPaymentThreshold:      kycThresholdAmount,
-		BaseURL:           "https://example.com",
+		IssuerKP:            issuerKP,
+		AssetCode:           assetGOAT.GetCode(),
+		HorizonClient:       &horizonMock,
+		NetworkPassphrase:   network.TestNetworkPassphrase,
+		Db:                  conn,
+		KycPaymentThreshold: kycThresholdAmount,
+		BaseURL:             "https://example.com",
 	}
 
 	tx, err := txnbuild.NewTransaction(txnbuild.TransactionParams{

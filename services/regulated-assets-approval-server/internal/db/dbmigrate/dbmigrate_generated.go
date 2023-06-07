@@ -3,6 +3,7 @@
 // migrations/2021-05-05.0.initial.sql (162B)
 // migrations/2021-05-18.0.accounts-kyc-status.sql (414B)
 // migrations/2021-06-08.0.pending-kyc-status.sql (193B)
+// migrations/2023-06-06.0.fx-rates.sql (335B)
 
 package dbmigrate
 
@@ -131,6 +132,26 @@ func migrations202106080PendingKycStatusSql() (*asset, error) {
 	return a, nil
 }
 
+var _migrations202306060FxRatesSql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x6c\xd0\x41\x4b\xc3\x40\x10\x05\xe0\xfb\xfc\x8a\x77\x6c\xb1\x11\x3c\xf7\x14\xcd\x0a\xc5\x35\x29\xdb\x04\xe9\x29\xac\xc9\xd6\x2e\x24\xd9\xb0\x33\xa1\xc5\x5f\x2f\x8d\xa0\xa5\xf4\x36\xc3\x07\xef\xc1\x4b\x12\x3c\xf4\xfe\x2b\x5a\x71\xa8\x46\xa2\x17\xa3\xd2\x52\xa1\x4c\x9f\xb5\xc2\x38\x7d\x76\xbe\x79\x3c\x9c\xeb\x8b\x33\x16\x04\x00\xbe\xc5\x4e\x99\x4d\xaa\xb1\x35\x9b\xf7\xd4\xec\xf1\xa6\xf6\xab\x99\x2c\xb3\x93\xba\x09\xad\x83\xb8\xb3\x20\x2f\x4a\xe4\x95\xd6\xd7\xea\x99\x27\x17\xef\xf9\xc4\xed\x5c\x74\x63\x40\x92\xc0\xf6\x61\x1a\x04\xe1\xf0\x9b\x02\x39\x5a\x41\x13\x62\x74\x3c\x86\xa1\x65\x48\xc0\x13\xaa\x1d\xb2\xd0\x75\x36\xce\x79\x97\xac\x5a\x7c\xef\x58\x6c\x3f\xe2\xff\x3a\x79\x39\xce\x2f\xbe\xc3\xe0\xfe\x9a\x90\xa9\xd7\xb4\xd2\x25\xf2\xe2\x63\xb1\x5c\xd1\x72\x4d\x74\xbd\x4f\x16\x4e\x03\x51\x66\x8a\xed\xfd\x7d\xd6\x44\x3f\x01\x00\x00\xff\xff\x29\x95\xea\x8e\x4f\x01\x00\x00")
+
+func migrations202306060FxRatesSqlBytes() ([]byte, error) {
+	return bindataRead(
+		_migrations202306060FxRatesSql,
+		"migrations/2023-06-06.0.fx-rates.sql",
+	)
+}
+
+func migrations202306060FxRatesSql() (*asset, error) {
+	bytes, err := migrations202306060FxRatesSqlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "migrations/2023-06-06.0.fx-rates.sql", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0xa, 0xfe, 0x81, 0xe5, 0xfb, 0xb5, 0x30, 0x41, 0xab, 0x40, 0xe, 0x53, 0x77, 0x2f, 0x5f, 0xd, 0xcd, 0xa8, 0xb9, 0x32, 0x51, 0x8a, 0x9c, 0x15, 0x3c, 0xcd, 0x83, 0x3b, 0x48, 0xe8, 0x37, 0x54}}
+	return a, nil
+}
+
 // Asset loads and returns the asset for the given name.
 // It returns an error if the asset could not be found or
 // could not be loaded.
@@ -225,6 +246,7 @@ var _bindata = map[string]func() (*asset, error){
 	"migrations/2021-05-05.0.initial.sql":             migrations202105050InitialSql,
 	"migrations/2021-05-18.0.accounts-kyc-status.sql": migrations202105180AccountsKycStatusSql,
 	"migrations/2021-06-08.0.pending-kyc-status.sql":  migrations202106080PendingKycStatusSql,
+	"migrations/2023-06-06.0.fx-rates.sql":            migrations202306060FxRatesSql,
 }
 
 // AssetDir returns the file names below a certain
@@ -274,6 +296,7 @@ var _bintree = &bintree{nil, map[string]*bintree{
 		"2021-05-05.0.initial.sql":             {migrations202105050InitialSql, map[string]*bintree{}},
 		"2021-05-18.0.accounts-kyc-status.sql": {migrations202105180AccountsKycStatusSql, map[string]*bintree{}},
 		"2021-06-08.0.pending-kyc-status.sql":  {migrations202106080PendingKycStatusSql, map[string]*bintree{}},
+		"2023-06-06.0.fx-rates.sql":            {migrations202306060FxRatesSql, map[string]*bintree{}},
 	}},
 }}
 
