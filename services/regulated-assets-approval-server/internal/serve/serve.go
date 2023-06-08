@@ -66,9 +66,13 @@ func handleHTTP(opts Options) http.Handler {
 	if err != nil {
 		log.Fatal(errors.Wrapf(err, "%s cannot be parsed as a Stellar amount", opts.KYCRequiredPaymentAmountThreshold))
 	}
-	parsedKYCRequiredPriceThreshold, err := decimal.NewFromString(opts.KYCRequiredPriceThreshold)
-	if err != nil {
-		log.Fatal(errors.Wrapf(err, "%s cannot be parsed as an amount", opts.KYCRequiredPriceThreshold))
+	var kycRequiredPriceThreshold *decimal.Decimal
+	if opts.KYCRequiredPriceThreshold != "" {
+		parsedKYCRequiredPriceThreshold, err := decimal.NewFromString(opts.KYCRequiredPriceThreshold)
+		if err != nil {
+			log.Fatal(errors.Wrapf(err, "%s cannot be parsed as an amount", opts.KYCRequiredPriceThreshold))
+		}
+		kycRequiredPriceThreshold = &parsedKYCRequiredPriceThreshold
 	}
 	db, err := db.Open(opts.DatabaseURL)
 	if err != nil {
@@ -109,7 +113,7 @@ func handleHTTP(opts Options) http.Handler {
 		NetworkPassphrase:   opts.NetworkPassphrase,
 		Db:                  db,
 		KycPaymentThreshold: parsedKYCRequiredPaymentThreshold,
-		KycPriceThreshold:   &parsedKYCRequiredPriceThreshold,
+		KycPriceThreshold:   kycRequiredPriceThreshold,
 		BaseURL:             opts.BaseURL,
 	}.ServeHTTP)
 	mux.Route("/kyc-status", func(mux chi.Router) {
