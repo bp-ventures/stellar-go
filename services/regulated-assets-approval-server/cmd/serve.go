@@ -84,6 +84,16 @@ func (c *ServeCommand) Command() *cobra.Command {
 			FlagDefault: "500",
 			Required:    true,
 		},
+		{
+			Name: "kyc-required-price-threshold",
+			Usage: `A percentage value, between 0 and 100, representing 
+the price difference tolerance for path payments and offer operations. If the 
+price difference exceeds this threshold, KYC will be required to approve the 
+transaction. E.g. 5, 10.2`,
+			OptType:   types.String,
+			ConfigKey: &opts.KYCRequiredPriceThreshold,
+			Required:  false,
+		},
 	}
 	cmd := &cobra.Command{
 		Use:   "serve",

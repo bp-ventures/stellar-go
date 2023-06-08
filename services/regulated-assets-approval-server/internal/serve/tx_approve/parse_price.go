@@ -2,8 +2,8 @@ package tx_approve
 
 import (
 	"context"
-	"math"
-	"strconv"
+
+	"github.com/shopspring/decimal"
 
 	"github.com/stellar/go/support/errors"
 	"github.com/stellar/go/txnbuild"
@@ -11,65 +11,65 @@ import (
 
 func (h TxApprove) getUsdPricePercentageDiff(
 	ctx context.Context,
-	middleOp *MiddleOperation) (float64, error) {
+	middleOp *MiddleOperation) (*decimal.Decimal, error) {
 	if middleOp.Payment != nil {
-		return 0, errors.New("cannot parse price for payment operation")
+		return nil, errors.New("cannot parse price for payment operation")
 	} else if middleOp.PathPaymentStrictReceive != nil {
-		sendMaxFloat64, err := strconv.ParseFloat(middleOp.PathPaymentStrictReceive.SendMax, 64)
+		sendMax, err := decimal.NewFromString(middleOp.PathPaymentStrictReceive.SendMax)
 		if err != nil {
-			return 0, err
+			return nil, err
 		}
-		destAmountFloat64, err := strconv.ParseFloat(middleOp.PathPaymentStrictReceive.DestAmount, 64)
+		destAmount, err := decimal.NewFromString(middleOp.PathPaymentStrictReceive.DestAmount)
 		if err != nil {
-			return 0, err
+			return nil, err
 		}
 		dbSendUsdRate, err := h.scanUsdRate(ctx, middleOp.PathPaymentStrictReceive.SendAsset)
 		if err != nil {
-			return 0, err
+			return nil, err
 		}
 		dbDestUsdRate, err := h.scanUsdRate(ctx, middleOp.PathPaymentStrictReceive.DestAsset)
 		if err != nil {
-			return 0, err
+			return nil, err
 		}
-		opRate := destAmountFloat64 / sendMaxFloat64
-		dbRate := dbDestUsdRate / dbSendUsdRate
-		diff := math.Abs(opRate - dbRate)
-		percDiff := diff / dbRate * 100
-		return percDiff, nil
+		opRate := destAmount.Div(sendMax)
+		dbRate := dbDestUsdRate.Div(*dbSendUsdRate)
+		diff := opRate.Sub(dbRate).Abs()
+		percDiff := diff.Div(dbRate).Mul(decimal.NewFromInt(100))
+		return &percDiff, nil
 	} else if middleOp.PathPaymentStrictSend != nil {
-		sendAmountFloat64, err := strconv.ParseFloat(middleOp.PathPaymentStrictSend.SendAmount, 64)
+		sendAmount, err := decimal.NewFromString(middleOp.PathPaymentStrictSend.SendAmount)
 		if err != nil {
-			return 0, err
+			return nil, err
 		}
-		destMinFloat64, err := strconv.ParseFloat(middleOp.PathPaymentStrictSend.DestMin, 64)
+		destMin, err := decimal.NewFromString(middleOp.PathPaymentStrictSend.DestMin)
 		if err != nil {
-			return 0, err
+			return nil, err
 		}
 		dbSendUsdRate, err := h.scanUsdRate(ctx, middleOp.PathPaymentStrictSend.SendAsset)
 		if err != nil {
-			return 0, err
+			return nil, err
 		}
 		dbDestUsdRate, err := h.scanUsdRate(ctx, middleOp.PathPaymentStrictSend.DestAsset)
 		if err != nil {
-			return 0, err
+			return nil, err
 		}
-		opRate := destMinFloat64 / sendAmountFloat64
-		dbRate := dbDestUsdRate / dbSendUsdRate
-		diff := math.Abs(opRate - dbRate)
-		percDiff := diff / dbRate * 100
-		return percDiff, nil
+		opRate := destMin.Div(sendAmount)
+		dbRate := dbDestUsdRate.Div(*dbSendUsdRate)
+		diff := opRate.Sub(dbRate).Abs()
+		percDiff := diff.Div(dbRate).Mul(decimal.NewFromInt(100))
+		return &percDiff, nil
 	} else if middleOp.ManageSellOffer != nil {
 		//TODO
-		return 0, nil
+		return nil, nil
 	} else if middleOp.ManageBuyOffer != nil {
 		//TODO
-		return 0, nil
+		return nil, nil
 	} else {
-		return 0, errors.New("middleOp has no operation set")
+		return nil, errors.New("middleOp has no operation set")
 	}
 }
 
-func (h TxApprove) scanUsdRate(ctx context.Context, asset txnbuild.Asset) (float64, error) {
+func (h TxApprove) scanUsdRate(ctx context.Context, asset txnbuild.Asset) (*decimal.Decimal, error) {
 	const query = `
 		SELECT usd_rate
 		FROM fx_rates
@@ -96,11 +96,11 @@ func (h TxApprove) scanUsdRate(ctx context.Context, asset txnbuild.Asset) (float
 		assetIssuer,
 	).Scan(&usdRate)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	usdRateFloat64, err := strconv.ParseFloat(usdRate, 64)
+	usdRateDecimal, err := decimal.NewFromString(usdRate)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	return usdRateFloat64, err
+	return &usdRateDecimal, err
 }

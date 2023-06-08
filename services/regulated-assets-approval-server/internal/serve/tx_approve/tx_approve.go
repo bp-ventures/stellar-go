@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/shopspring/decimal"
 	"github.com/stellar/go/amount"
 	"github.com/stellar/go/clients/horizonclient"
 	"github.com/stellar/go/keypair"
@@ -24,7 +25,7 @@ type TxApprove struct {
 	NetworkPassphrase   string
 	Db                  *sqlx.DB
 	KycPaymentThreshold int64
-	KycOfferThreshold   int64
+	KycPriceThreshold   *decimal.Decimal
 	BaseURL             string
 }
 

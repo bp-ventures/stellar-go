@@ -21,7 +21,7 @@ func (h TxApprove) checkKyc(
 		amountRequiresKyc bool
 		err               error
 	)
-	if middleOp.Payment == nil {
+	if middleOp.Payment == nil && h.KycPriceThreshold != nil {
 		priceRequiresKyc, err = h.priceRequiresKyc(ctx, middleOp)
 		if err != nil {
 			return nil, err
@@ -113,7 +113,7 @@ func (h TxApprove) priceRequiresKyc(ctx context.Context, middleOp *MiddleOperati
 		}
 		return false, err
 	}
-	if percDiff > 5.0 {
+	if percDiff.GreaterThan(*h.KycPriceThreshold) {
 		return true, nil
 	}
 	return false, nil

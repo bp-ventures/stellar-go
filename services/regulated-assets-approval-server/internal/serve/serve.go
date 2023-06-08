@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
+	"github.com/shopspring/decimal"
 	"github.com/stellar/go/amount"
 	"github.com/stellar/go/clients/horizonclient"
 	"github.com/stellar/go/keypair"
@@ -30,6 +31,7 @@ type Options struct {
 	HorizonURL                        string
 	IssuerAccountSecret               string
 	KYCRequiredPaymentAmountThreshold string
+	KYCRequiredPriceThreshold         string
 	NetworkPassphrase                 string
 	Port                              int
 }
@@ -63,6 +65,10 @@ func handleHTTP(opts Options) http.Handler {
 	parsedKYCRequiredPaymentThreshold, err := amount.ParseInt64(opts.KYCRequiredPaymentAmountThreshold)
 	if err != nil {
 		log.Fatal(errors.Wrapf(err, "%s cannot be parsed as a Stellar amount", opts.KYCRequiredPaymentAmountThreshold))
+	}
+	parsedKYCRequiredPriceThreshold, err := decimal.NewFromString(opts.KYCRequiredPriceThreshold)
+	if err != nil {
+		log.Fatal(errors.Wrapf(err, "%s cannot be parsed as an amount", opts.KYCRequiredPriceThreshold))
 	}
 	db, err := db.Open(opts.DatabaseURL)
 	if err != nil {
@@ -103,6 +109,7 @@ func handleHTTP(opts Options) http.Handler {
 		NetworkPassphrase:   opts.NetworkPassphrase,
 		Db:                  db,
 		KycPaymentThreshold: parsedKYCRequiredPaymentThreshold,
+		KycPriceThreshold:   &parsedKYCRequiredPriceThreshold,
 		BaseURL:             opts.BaseURL,
 	}.ServeHTTP)
 	mux.Route("/kyc-status", func(mux chi.Router) {

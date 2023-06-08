@@ -2,74 +2,72 @@ package tx_approve
 
 import (
 	"errors"
-	"math"
-	"strconv"
+
+	"github.com/shopspring/decimal"
 )
 
 func (h TxApprove) parseAmount(middleOp *MiddleOperation) (int64, error) {
 	if middleOp.Payment != nil {
-		if amountFloat64, err := strconv.ParseFloat(middleOp.Payment.Amount, 64); err != nil {
+		if amount, err := decimal.NewFromString(middleOp.Payment.Amount); err != nil {
 			return 0, err
 		} else {
-			return int64(math.Ceil(amountFloat64)), nil
+			return amount.Ceil().IntPart(), nil
 		}
 	} else if middleOp.PathPaymentStrictReceive != nil {
 		if h.isRegulatedAsset(middleOp.PathPaymentStrictReceive.SendAsset) {
-			sendMaxFloat64, err := strconv.ParseFloat(middleOp.PathPaymentStrictReceive.SendMax, 64)
+			sendMax, err := decimal.NewFromString(middleOp.PathPaymentStrictReceive.SendMax)
 			if err != nil {
 				return 0, err
 			}
-			sendMaxInt64 := int64(math.Ceil(sendMaxFloat64))
-			return sendMaxInt64, nil
+			return sendMax.Ceil().IntPart(), nil
 		} else {
-			destAmountFloat64, err := strconv.ParseFloat(middleOp.PathPaymentStrictReceive.DestAmount, 64)
+			destAmount, err := decimal.NewFromString(middleOp.PathPaymentStrictReceive.DestAmount)
 			if err != nil {
 				return 0, err
 			}
-			destAmountInt64 := int64(math.Ceil(destAmountFloat64))
-			return destAmountInt64, nil
+			return destAmount.Ceil().IntPart(), nil
 		}
 	} else if middleOp.PathPaymentStrictSend != nil {
 		if h.isRegulatedAsset(middleOp.PathPaymentStrictSend.SendAsset) {
-			sendAmountFloat64, err := strconv.ParseFloat(middleOp.PathPaymentStrictSend.SendAmount, 64)
+			sendAmount, err := decimal.NewFromString(middleOp.PathPaymentStrictSend.SendAmount)
 			if err != nil {
 				return 0, err
 			}
-			sendAmountInt64 := int64(math.Ceil(sendAmountFloat64))
-			return sendAmountInt64, nil
+			return sendAmount.Ceil().IntPart(), nil
 		} else {
-			destMinFloat64, err := strconv.ParseFloat(middleOp.PathPaymentStrictSend.DestMin, 64)
+			destMin, err := decimal.NewFromString(middleOp.PathPaymentStrictSend.DestMin)
 			if err != nil {
 				return 0, err
 			}
-			destMinInt64 := int64(math.Ceil(destMinFloat64))
-			return destMinInt64, nil
+			return destMin.Ceil().IntPart(), nil
 		}
 	} else if middleOp.ManageSellOffer != nil {
-		sellAmountFloat64, err := strconv.ParseFloat(middleOp.ManageSellOffer.Amount, 64)
+		sellAmount, err := decimal.NewFromString(middleOp.ManageSellOffer.Amount)
 		if err != nil {
 			return 0, err
 		}
 		if h.isRegulatedAsset(middleOp.ManageSellOffer.Selling) {
-			return int64(math.Ceil(sellAmountFloat64)), nil
+			return sellAmount.Ceil().IntPart(), nil
 		} else {
-			priceFloat64 := float64(middleOp.ManageSellOffer.Price.N) / float64(middleOp.ManageSellOffer.Price.D)
-			buyAmountFloat64 := math.Ceil(sellAmountFloat64 * priceFloat64)
-			buyAmountInt64 := int64(buyAmountFloat64)
-			return buyAmountInt64, nil
+			numerator := decimal.NewFromInt32(int32(middleOp.ManageSellOffer.Price.N))
+			denominator := decimal.NewFromInt32(int32(middleOp.ManageSellOffer.Price.D))
+			price := numerator.Div(denominator)
+			buyAmount := sellAmount.Mul(price)
+			return buyAmount.Ceil().IntPart(), nil
 		}
 	} else if middleOp.ManageBuyOffer != nil {
-		buyAmountFloat64, err := strconv.ParseFloat(middleOp.ManageBuyOffer.Amount, 64)
+		buyAmount, err := decimal.NewFromString(middleOp.ManageBuyOffer.Amount)
 		if err != nil {
 			return 0, err
 		}
 		if h.isRegulatedAsset(middleOp.ManageBuyOffer.Buying) {
-			return int64(math.Ceil(buyAmountFloat64)), nil
+			return buyAmount.Ceil().IntPart(), nil
 		} else {
-			priceFloat64 := float64(middleOp.ManageBuyOffer.Price.N) / float64(middleOp.ManageBuyOffer.Price.D)
-			sellAmountFloat64 := math.Ceil(buyAmountFloat64 * priceFloat64)
-			sellAmountInt64 := int64(sellAmountFloat64)
-			return sellAmountInt64, nil
+			numerator := decimal.NewFromInt32(int32(middleOp.ManageBuyOffer.Price.N))
+			denominator := decimal.NewFromInt32(int32(middleOp.ManageBuyOffer.Price.D))
+			price := numerator.Div(denominator)
+			sellAmount := buyAmount.Mul(price)
+			return sellAmount.Ceil().IntPart(), nil
 		}
 	} else {
 		return 0, errors.New("middleOp has no operation set")

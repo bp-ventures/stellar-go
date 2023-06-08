@@ -35,6 +35,7 @@ require (
 	github.com/rs/cors v0.0.0-20160617231935-a62a804a8a00
 	github.com/rubenv/sql-migrate v0.0.0-20190717103323-87ce952f7079
 	github.com/segmentio/go-loggly v0.5.1-0.20171222203950-eb91657e62b2
+	github.com/shopspring/decimal v1.3.1
 	github.com/shurcooL/httpfs v0.0.0-20190707220628-8d4bc4ba7749
 	github.com/sirupsen/logrus v1.4.1
 	github.com/spf13/cobra v0.0.0-20160830174925-9c28e4bbd74e
